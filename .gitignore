@@ -1,0 +1,28 @@
+# 插件签名私钥：绝对不进 git
+keys/*.pem
+keys/pub.der
+
+# 打包产物
+dist/
+
+.DS_Store
+node_modules/
+*.log
+
+# 设计检查工具的设定
+.impeccable/
+
+# 其他常见的密钥 / 本机设定，永远不进 git
+.env
+.env.*
+*.key
+*.p12
+*.pfx
+.claude/settings.local.json
+
+# 内部文件：只留在这台电脑和私人仓库 whatsapp-readonly-mcp-dev，不进公开仓库
+SPEC.md
+CLAUDE.md
+HANDOFF-Testing.md
+TEST-REPORT.md
+research/

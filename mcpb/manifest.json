@@ -1,0 +1,79 @@
+{
+  "manifest_version": "0.2",
+  "name": "chat-assistant",
+  "display_name": "AI for Business Chat Assistant",
+  "version": "0.12.0",
+  "description": "Reads your WhatsApp Web open in Chrome and helps you draft replies, saved as drafts. It never sends messages, never marks as read, and never connects to outside servers. Needs the AI for Business Chat Assistant Chrome extension. Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.",
+  "long_description": "Ask Claude things like \"who messaged me recently\", \"who haven't I replied to\" or \"what did this group talk about\".\n\n- Never sends: there is no send, reply, forward, delete or mark-as-read feature\n- AI drafts: Claude writes a reply and saves it as a draft; a preview appears above the WhatsApp message box and you press send yourself\n- Local only: talks to the Chrome extension over 127.0.0.1 with a pairing code; no outside servers, no analytics\n- Unofficial: not affiliated with WhatsApp or Meta; reads WhatsApp Web internals, which may break when WhatsApp updates; try with a work number first",
+  "author": {
+    "name": "AI for Business (aiclassmalaysia.com)"
+  },
+  "license": "MIT",
+  "keywords": [
+    "whatsapp",
+    "read-only",
+    "local"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/server.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "get_status",
+      "description": "Read-only: is WhatsApp Web open, is the extension connected; gives a pairing code if not paired"
+    },
+    {
+      "name": "list_chats",
+      "description": "Read-only: list chats (filter by unread / groups / keyword)"
+    },
+    {
+      "name": "get_messages",
+      "description": "Read-only: read the latest N messages of a chat (up to 100)"
+    },
+    {
+      "name": "get_media",
+      "description": "See a photo or file in a message (read-only, only what is already on this computer)"
+    },
+    {
+      "name": "download_media",
+      "description": "Download the photo, video, voice message or file in one message to your Downloads folder (never sends, never marks as read)"
+    },
+    {
+      "name": "search_messages",
+      "description": "Read-only: search stored messages for a keyword"
+    },
+    {
+      "name": "list_awaiting_reply",
+      "description": "Read-only: chats where they spoke last and you haven't replied"
+    },
+    {
+      "name": "save_draft",
+      "description": "Save a reply draft to the extension's draft list (never sent)"
+    },
+    {
+      "name": "list_drafts",
+      "description": "Read-only: AI drafts and what you actually sent (for comparison)"
+    }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "icon": "icon.png",
+  "homepage": "https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp",
+  "support": "https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/issues"
+}

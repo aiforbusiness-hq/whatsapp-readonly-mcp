@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "AI for Business Chat Assistant"
+  },
+  "extShortName": {
+    "message": "AI+ Chat"
+  },
+  "extDescription": {
+    "message": "WhatsApp Web 的非官方小幫手：讓 Claude / ChatGPT 讀你的對話、起草回覆。絕不發送。與 WhatsApp / Meta 無關。"
+  }
+}

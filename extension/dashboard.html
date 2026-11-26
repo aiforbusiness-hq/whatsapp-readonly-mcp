@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI for Business Chat Assistant 仪表板</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="page">
+<div class="app">
+  <!-- 左边：像 WhatsApp「设定」的选单 -->
+  <aside class="side">
+    <div class="side-head">
+      <svg class="mark" role="img" aria-label="AI for Business" viewBox="0 0 26 26"><rect width="26" height="26" rx="7" fill="#f5c83b"/><g transform="translate(6.25 4.64) scale(0.034)"><path fill="#111111" fill-rule="evenodd" d="M1 414L121 78H200L320 414H247L222 340H95L68 414ZM159 147L204 284H113Z"/><rect x="324" y="78" width="72" height="337" fill="#111111"/><rect x="438" y="-6" width="46" height="138" rx="6" fill="#ffffff"/><rect x="400" y="41" width="130" height="46" rx="6" fill="#ffffff"/></g><g transform="translate(20.7 20.7) scale(.88) translate(-20 -20)"><circle cx="20" cy="20" r="5.9" fill="#ffffff"/><svg x="15.1" y="15.1" width="9.8" height="9.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#25d366"/><path fill="#ffffff" fill-rule="evenodd" d="M12 4.1a7.9 7.9 0 0 0-6.8 11.9l-1.1 4 4.1-1.1A7.9 7.9 0 1 0 12 4.1zm0 1.45a6.45 6.45 0 1 1-3.3 12l-.25-.15-2.4.65.65-2.35-.16-.26A6.45 6.45 0 0 1 12 5.55z"/><path fill="#ffffff" d="M9.6 8.2c-.17-.38-.35-.39-.51-.4h-.44a.85.85 0 0 0-.62.29 2.6 2.6 0 0 0-.81 1.93c0 1.14.83 2.24.94 2.39.12.15 1.61 2.57 3.98 3.5 1.97.78 2.37.62 2.8.58.43-.04 1.38-.56 1.57-1.11.2-.55.2-1.02.14-1.11-.06-.1-.21-.16-.45-.27-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.75-.74.9-.14.16-.27.18-.5.06a6.3 6.3 0 0 1-1.86-1.15 7 7 0 0 1-1.29-1.6c-.13-.24 0-.36.1-.48.11-.1.24-.27.36-.41.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.51-1.28-.72-1.73z"/></svg></g></svg>
+      <div class="brand-text">
+        <h1>Chat Assistant</h1>
+        <p>AI for Business</p>
+      </div>
+    </div>
+    <div class="status" id="status" role="status">
+      <span class="dot warn" id="statusDot"></span>
+      <span><strong id="statusMain">连接中…</strong><span id="statusSub"></span></span>
+    </div>
+    <nav class="menu" aria-label="仪表板">
+      <button class="item" data-view="overview" aria-current="page">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-6M22 20H2"/></svg></span>
+        <span class="tx"><span class="t">概览</span><span class="d" id="subOverview">谁在等你回</span></span>
+      <span class="mbadge" id="mb-overview" hidden></span>
+      </button>
+      <button class="item" data-view="activity">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="tx"><span class="t">AI 活动纪录</span><span class="d" id="subActivity">AI 读了什么</span></span>
+      <span class="mbadge" id="mb-activity" hidden></span>
+      </button>
+      <button class="item" data-view="files">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></span>
+        <span class="tx"><span class="t">AI 下载的文件</span><span class="d" id="subFiles">预览 · 安全检查</span></span>
+      <span class="mbadge" id="mb-files" hidden></span>
+      </button>
+      <button class="item" data-view="drafts">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span>
+        <span class="tx"><span class="t">草稿 vs 实际</span><span class="d" id="subDrafts">AI 草稿用了多少</span></span>
+      <span class="mbadge" id="mb-drafts" hidden></span>
+      </button>
+      <button class="item" data-view="export">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg></span>
+        <span class="tx"><span class="t">导出</span><span class="d">CSV / JSON 存到下载</span></span>
+      </button>
+      <button class="item" data-view="data">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg></span>
+        <span class="tx"><span class="t">我的资料</span><span class="d" id="subData">存了什么 · 清除</span></span>
+      </button>
+      <button class="item" data-view="settings">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+        <span class="tx"><span class="t">设定</span><span class="d" id="subSettings">语言</span></span>
+      </button>
+    </nav>
+    <p class="side-foot">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>
+      <span>资料只留在你的浏览器，只在你要求时由 AI 连接器读取。</span>
+    </p>
+  </aside>
+
+  <!-- 右边：一次只显示一个分区 -->
+  <main class="main">
+    <header class="bar">
+      <h2 id="viewTitle">概览</h2>
+      <div class="bar-actions">
+        <button id="refresh" class="icon-btn" aria-label="重新读取" title="重新读取">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        </button>
+        <button id="newTab" class="icon-btn" aria-label="在新分页打开" title="在新分页打开" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </button>
+        <button id="close" class="icon-btn" aria-label="关闭仪表板（Esc）" title="关闭（Esc）" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <div id="banner" class="banner" role="status" hidden></div>
+
+      <!-- 概览 -->
+      <div class="card setup" id="setup" hidden>
+        <div class="setup-head">
+          <span class="setup-ic" id="setupIc" aria-hidden="true"></span>
+          <div>
+            <h3 class="card-title" id="setupTitle"></h3>
+            <p class="setup-text" id="setupText"></p>
+          </div>
+        </div>
+        <ol class="setup-steps" id="setupSteps" hidden></ol>
+        <p class="keep-open in-setup"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>请让电脑开着，并在 Chrome 打开 WhatsApp Web。关掉了，AI 就读不到。</span></p>
+        <form class="pair-row" id="pairForm" hidden>
+          <label for="pairCode" class="pair-label">配对码</label>
+          <input id="pairCode" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="6 位数">
+          <button class="primary-btn" type="submit" id="pairBtn">配对</button>
+          <span class="pair-msg" id="pairMsg" aria-live="polite"></span>
+        </form>
+      </div>
+
+      <section class="view" id="v-overview" aria-labelledby="viewTitle">
+        <div class="card safe">
+          <div class="safe-top">
+            <svg class="shield" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4l16 6v11c0 10-6.8 17-16 21-9.2-4-16-11-16-21V10z" fill="#00a884"/><path d="M16.5 24.5l5 5 10-10.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div>
+              <h3 class="card-title">资料只在你的电脑里</h3>
+              <p class="safe-sub">只走本机连线（127.0.0.1）。我们没有服务器，<strong class="hl-text">对话不经过我们。</strong></p>
+            </div>
+          </div>
+          <svg class="flow" viewBox="0 0 640 140" role="img" aria-labelledby="flowDesc">
+            <desc id="flowDesc">你的 AI 通过 Plugin（MCP），用上锁的本机连线连到 Chrome Extension，再读 WhatsApp Web。全部在你的电脑里。</desc>
+            <rect x="4" y="4" width="632" height="132" rx="18" class="pc"/>
+            <text x="22" y="26" class="pc-label">你的电脑</text>
+            <path d="M130 62H322" class="line ai-link"/><path d="M322 62H514" class="line"/>
+            <path d="M130 62H514" class="pulse" pathLength="100"/>
+            <g id="aiIcons" transform="translate(110 62)"></g>
+            <text x="110" y="108" text-anchor="middle" class="lbl">你的 AI + Plugin</text>
+            <text x="110" y="124" text-anchor="middle" class="sub" id="aiSub"></text>
+            <g class="lock first" transform="translate(216 62)"><circle r="11" class="lock-bg"/><rect x="-5" y="-1.5" width="10" height="7.5" rx="1.5" fill="#fff"/><path d="M-3 -1.5v-2.2a3 3 0 0 1 6 0v2.2" fill="none" stroke="#fff" stroke-width="1.8"/></g>
+            <g transform="translate(322 62)">
+              <rect x="-20" y="-20" width="40" height="40" rx="11" class="sep-sq"/>
+              <svg x="-18" y="-18" width="36" height="36" viewBox="0 0 26 26"><rect width="26" height="26" rx="7" fill="#f5c83b"/><g transform="translate(6.25 4.64) scale(0.034)"><path fill="#111111" fill-rule="evenodd" d="M1 414L121 78H200L320 414H247L222 340H95L68 414ZM159 147L204 284H113Z"/><rect x="324" y="78" width="72" height="337" fill="#111111"/><rect x="438" y="-6" width="46" height="138" rx="6" fill="#ffffff"/><rect x="400" y="41" width="130" height="46" rx="6" fill="#ffffff"/></g><g transform="translate(20.7 20.7) scale(.88) translate(-20 -20)"><circle cx="20" cy="20" r="5.9" fill="#ffffff"/><svg x="15.1" y="15.1" width="9.8" height="9.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#25d366"/><path fill="#ffffff" fill-rule="evenodd" d="M12 4.1a7.9 7.9 0 0 0-6.8 11.9l-1.1 4 4.1-1.1A7.9 7.9 0 1 0 12 4.1zm0 1.45a6.45 6.45 0 1 1-3.3 12l-.25-.15-2.4.65.65-2.35-.16-.26A6.45 6.45 0 0 1 12 5.55z"/><path fill="#ffffff" d="M9.6 8.2c-.17-.38-.35-.39-.51-.4h-.44a.85.85 0 0 0-.62.29 2.6 2.6 0 0 0-.81 1.93c0 1.14.83 2.24.94 2.39.12.15 1.61 2.57 3.98 3.5 1.97.78 2.37.62 2.8.58.43-.04 1.38-.56 1.57-1.11.2-.55.2-1.02.14-1.11-.06-.1-.21-.16-.45-.27-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.75-.74.9-.14.16-.27.18-.5.06a6.3 6.3 0 0 1-1.86-1.15 7 7 0 0 1-1.29-1.6c-.13-.24 0-.36.1-.48.11-.1.24-.27.36-.41.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.51-1.28-.72-1.73z"/></svg></g></svg>
+            </g>
+            <text x="322" y="108" text-anchor="middle" class="lbl">AI for Business</text>
+            <text x="322" y="124" text-anchor="middle" class="sub">Chrome Extension</text>
+            <g class="lock l2" transform="translate(428 62)"><circle r="11" class="lock-bg"/><rect x="-5" y="-1.5" width="10" height="7.5" rx="1.5" fill="#fff"/><path d="M-3 -1.5v-2.2a3 3 0 0 1 6 0v2.2" fill="none" stroke="#fff" stroke-width="1.8"/></g>
+            <g class="wa-node" transform="translate(534 62)"><circle r="24" fill="#2b2b2b"/><path d="M-11 -9h22a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-12l-6 5v-5h-4a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3z" fill="#fff"/><circle cx="-6" cy="-0.5" r="1.8" fill="#2b2b2b"/><circle cx="0" cy="-0.5" r="1.8" fill="#2b2b2b"/><circle cx="6" cy="-0.5" r="1.8" fill="#2b2b2b"/></g>
+            <text x="534" y="108" text-anchor="middle" class="lbl">WhatsApp Web</text>
+            <text x="534" y="124" text-anchor="middle" class="sub">只读</text>
+          </svg>
+          <p class="keep-open"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>请让电脑开着，并在 Chrome 打开 WhatsApp Web。关掉了，AI 就读不到。</span></p>
+          <details class="fold inner">
+            <summary><span class="fold-title">怎么确定是安全的</span><span class="fold-sub">现在就检查得到的 · 老实说</span></summary>
+            <div class="fold-body">
+              <ul class="checks" id="checks"></ul>
+              <ul class="honest">
+                <li>你在 Claude / ChatGPT 里问问题时，AI 读到的内容会送去 Anthropic 或 OpenAI 处理，就像平常用 AI 一样；不会送到 AI for Business。</li>
+              
+              <li>这是非官方工具，用的是 WhatsApp Web 内部的读法。WhatsApp 有可能限制账号；建议先用工作副号。</li>
+              <li>程序不会发信息，回复永远由你自己按发送。</li>
+              <li>想完全清掉：插件弹窗「清空草稿」、「AI 活动纪录」清空纪录，再移除插件。</li>
+            </ul>
+            </div>
+          </details>
+        </div>
+        <div class="hero">
+          <div class="card attention">
+            <div class="attention-head">
+              <div>
+                <div class="big" id="waitBig">–</div>
+                <div class="big-label">个人在等你回</div>
+              </div>
+              <span class="pill" id="waitPill" hidden></span>
+            </div>
+            <ul class="people" id="waitingList"></ul>
+            <div class="att-foot">
+              <button class="text-btn" id="moreWaiting" hidden>看全部</button>
+              <button class="text-btn muted-btn" id="ignoreAll" hidden>全部标为不用回</button>
+            </div>
+          </div>
+          <div class="card stats">
+            <dl class="stat-list" id="statList"></dl>
+          </div>
+        </div>
+
+
+        <div class="card">
+          <h3 class="card-title">你应该知道</h3>
+          <ul class="tips" id="insights"></ul>
+        </div>
+
+        <details class="card fold" id="foldCharts">
+          <summary><span class="fold-title">信息趋势</span><span class="fold-sub">近 14 天收发量 · 别人几点找你</span></summary>
+          <div class="fold-body">
+            <div class="seg" role="tablist" aria-label="图表">
+              <button role="tab" aria-selected="true" data-chart="daily">近 14 天</button>
+              <button role="tab" aria-selected="false" data-chart="hours">时段</button>
+            </div>
+            <div class="legend" id="legendDaily"><span class="key k-in"></span>收到<span class="key k-out"></span>我发出</div>
+            <div class="chart" id="chart"></div>
+            <button class="text-btn" id="tableToggle">看表格</button>
+            <div class="tbl-wrap" id="chartTable" hidden></div>
+          </div>
+        </details>
+
+        <details class="card fold">
+          <summary><span class="fold-title">最活跃的对话</span><span class="fold-sub">近 7 天</span></summary>
+          <div class="fold-body"><ul class="people" id="topList"></ul></div>
+        </details>
+        <p class="fine" id="coverage"></p>
+      </section>
+
+      <!-- AI 活动纪录 -->
+      <section class="view" id="v-activity" hidden>
+        <div class="facts" id="actFacts"></div>
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">近 14 天 AI 请求</h3>
+            <span class="fine" id="actTotal"></span>
+          </div>
+          <div class="legend" id="actLegend"></div>
+          <div class="chart" id="actChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">请求纪录</h3>
+            <div class="chips" role="group" aria-label="按 AI 筛选" id="actFilter"></div>
+          </div>
+          <ol class="feed" id="actFeed"></ol>
+          <button class="text-btn" id="moreAct" hidden>显示更多</button>
+        </div>
+        <details class="card fold">
+          <summary><span class="fold-title">关于这份纪录</span><span class="fold-sub">存什么 · 怎么清空</span></summary>
+          <div class="fold-body">
+            <p class="para" id="actAbout"></p>
+            <button class="danger-btn" id="clearAct">清空活动纪录</button>
+          </div>
+        </details>
+      </section>
+
+      <!-- AI 下载的文件 -->
+      <section class="view" id="v-files" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">最近下载</h3>
+            <div class="chips" role="group" aria-label="按结果筛选" id="fileFilter"></div>
+          </div>
+          <p class="hint">你叫 AI 下载的照片、影片、语音和文件。预览图是插件重新画过的小图，不是原文件。这里不会打开文件。</p>
+          <ul class="files" id="fileGrid"></ul>
+        </div>
+        <details class="card fold">
+          <summary><span class="fold-title">怎么防恶意文件</span><span class="fold-sub">检查什么 · 检查不到什么</span></summary>
+          <div class="fold-body">
+            <ul class="para-list">
+              <li>看文件真正的内容，不信名字。只存看得完、查得完的文件：照片、影片、声音、纯文字、PDF、新版 Office（docx / xlsx / pptx）。</li>
+              <li>其他一律不存：程序和脚本、网页、所有压缩档（zip、rar、7z）、旧版 Office（doc / xls / ppt）、RTF、SVG、名字跟内容对不上的文件。要的话，确认是认识的人传的，再自己在 WhatsApp 里下载。</li>
+              <li>PDF 会解开每一部分检查：带程序码、会叫电脑执行程序、夹带别的文件，就不存。Office 文件带巨集、内嵌物件、DDE 或连到外面的范本，也不存。CSV 表格里有公式或指令（= + - @ 开头），也不存。加密、太大或太复杂看不完的，也不存。</li>
+              <li>没有「打开」按钮，只有「在文件夹中显示」。打开前先确认是认识的人传的。</li>
+              <li>检查不到：照片、影片、PDF 阅读程序本身的漏洞，和新的病毒。电脑和 Chrome 的防毒还是要开着。</li>
+            </ul>
+            <p class="para" id="filesAbout"></p>
+            <button class="danger-btn" id="clearFiles">清空这份纪录</button>
+          </div>
+        </details>
+      </section>
+
+      <!-- 草稿 vs 实际 -->
+      <section class="view" id="v-drafts" hidden>
+        <div class="card">
+          <div class="split-head">
+            <div>
+              <div class="big" id="useRate">–</div>
+              <div class="big-label">AI 草稿你用了（照用或改过再发）</div>
+            </div>
+            <dl class="mini" id="draftMini"></dl>
+          </div>
+          <div class="stack" id="stack" role="img"></div>
+          <ul class="stack-legend" id="stackLegend"></ul>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">每一条草稿</h3>
+            <div class="chips" role="group" aria-label="按结果筛选" id="draftFilter"></div>
+          </div>
+          <p class="hint">点一条看草稿和你实际发出的信息。</p>
+          <ul class="drafts" id="draftList"></ul>
+          <button class="text-btn" id="moreDrafts" hidden>显示更多</button>
+        </div>
+      </section>
+
+      <!-- 导出 -->
+      <section class="view" id="v-export" hidden>
+        <div class="card">
+          <div class="range-row">
+            <span class="range-label">时间范围</span>
+            <div class="seg range-seg" id="range" role="group" aria-label="时间范围">
+              <button type="button" data-days="7" aria-pressed="false">近 7 天</button>
+              <button type="button" data-days="30" aria-pressed="true">近 30 天</button>
+              <button type="button" data-days="90" aria-pressed="false">近 90 天（全部）</button>
+            </div>
+            <span class="fine" id="exportCount"></span>
+          </div>
+        </div>
+        <div class="card main-export">
+          <div class="exp-row">
+            <span class="exp-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span>
+            <div class="exp-tx">
+              <h3>对话时间线</h3>
+              <p>有 AI 草稿的对话，所有信息按时间排好；你发出的每一条都有时间，不管有没有用草稿。</p>
+            </div>
+            <button class="primary-btn" data-export="timeline">下载 CSV</button>
+          </div>
+          <div class="opts">
+            <label class="switch"><input type="checkbox" id="optDrafts" checked><span class="track" aria-hidden="true"></span><span><strong>放入 AI 草稿</strong><small>草稿排在它建立的时间点（原本打算填进输入框的位置）</small></span></label>
+            <label class="switch"><input type="checkbox" id="optTheirs" checked><span class="track" aria-hidden="true"></span><span><strong>放入对方的信息</strong><small>关掉 = 只有你自己发出的信息</small></span></label>
+          </div>
+        </div>
+        <details class="card fold">
+          <summary><span class="fold-title">其他格式</span><span class="fold-sub">只有草稿 · 草稿 + 回复 · JSON · 活动纪录</span></summary>
+          <div class="fold-body">
+            <div class="exp-row"><div class="exp-tx"><h3>只有草稿</h3><p>AI 写的每一条草稿和时间。</p></div><button class="sec-btn" data-export="drafts">CSV</button></div>
+            <div class="exp-row"><div class="exp-tx"><h3>草稿 + 实际回复</h3><p>每条草稿一行，旁边是插件估计的「那一轮」回复和相似度。</p></div><button class="sec-btn" data-export="pairs">CSV</button></div>
+            <div class="exp-row"><div class="exp-tx"><h3>完整资料</h3><p>给另一个 AI 分析用。</p></div><button class="sec-btn" data-export="json">JSON</button></div>
+            <div class="exp-row"><div class="exp-tx"><h3>AI 活动纪录</h3><p>哪个 AI 什么时候读了什么。</p></div><button class="sec-btn" data-export="activity">CSV</button></div>
+          </div>
+        </details>
+        <p class="fine" id="exportMsg" aria-live="polite">文件存到你电脑的「下载」文件夹，不会上传。CSV 可以用 Excel / Google 表格 / Numbers 打开。</p>
+      </section>
+
+      <!-- 设定 -->
+      <section class="view" id="v-data" hidden>
+        <div class="card">
+          <p class="para">这些资料只存在这台电脑的 Chrome 里，不会传到网络上。清除后没办法复原。已经下载到「下载 / AI for Business Chat Assistant」的文件不会被删掉，要删请自己在文件夹里删。</p>
+          <ul class="data-list" id="dataList"></ul>
+          <div class="set-row set-sep">
+            <div class="exp-tx">
+              <h3>全部清除</h3>
+              <p>上面每一项都清掉，包括配对。之后要用，要在 AI 里问「WhatsApp 状态」拿新的配对码重新配对。</p>
+            </div>
+            <button type="button" class="danger-btn" id="clearAllData">全部清除</button>
+          </div>
+          <p class="para muted-note" id="dataMsg" role="status"></p>
+        </div>
+      </section>
+      <section class="view" id="v-settings" hidden>
+        <div class="card">
+          <div class="set-row">
+            <div class="exp-tx">
+              <h3>语言</h3>
+              <p>仪表板、插件弹窗和输入框上方的草稿卡用的语言。</p>
+            </div>
+            <div class="seg" id="langSeg" role="group" aria-label="语言">
+              <button type="button" data-lang="auto" aria-pressed="false">跟浏览器</button>
+              <button type="button" data-lang="en" aria-pressed="false">English</button>
+              <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+            </div>
+          </div>
+          <div class="set-row set-sep">
+            <div class="exp-tx">
+              <h3>自动「不用回」</h3>
+              <p>等了超过这么多天的对话，自动当作不用回，不算进「等你回」。对方再传信息就会回来。</p>
+            </div>
+            <div class="seg" id="autoSeg" role="group" aria-label="自动不用回">
+              <button type="button" data-days="0" aria-pressed="false">关</button>
+              <button type="button" data-days="3" aria-pressed="false">3 天</button>
+              <button type="button" data-days="7" aria-pressed="false">7 天</button>
+              <button type="button" data-days="14" aria-pressed="false">14 天</button>
+              <button type="button" data-days="30" aria-pressed="false">30 天</button>
+            </div>
+          </div>
+          <div class="set-row set-sep">
+            <div class="exp-tx">
+              <h3>取消配对</h3>
+              <p>插件忘掉配对密钥、断开所有 AI。之后要用，要在 AI 里问「WhatsApp 状态」拿新的配对码重新配对。</p>
+            </div>
+            <button type="button" class="danger-btn" id="unpairBtn">取消配对</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="confirm-back" id="confirmBack" hidden>
+  <div class="confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmBody"></p>
+    <div class="confirm-btns">
+      <button type="button" class="ghost-btn" id="confirmNo">取消</button>
+      <button type="button" class="danger-fill" id="confirmYes">清除</button>
+    </div>
+  </div>
+</div>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<script src="i18n.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

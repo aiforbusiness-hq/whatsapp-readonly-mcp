@@ -1,0 +1,17 @@
+{
+  "name": "aiforbusiness",
+  "owner": {
+    "name": "AI for Business",
+    "url": "https://aiclassmalaysia.com"
+  },
+  "metadata": {
+    "description": "Plugins for AI for Business students"
+  },
+  "plugins": [
+    {
+      "name": "chat-assistant",
+      "source": "./plugins/chat-assistant",
+      "description": "Reads WhatsApp Web · read-only, never sends"
+    }
+  ]
+}

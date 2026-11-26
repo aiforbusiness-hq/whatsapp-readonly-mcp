@@ -1,0 +1,260 @@
+// WhatsApp 页面左边侧栏加一个「AI+」图示（放在 Meta AI 正下方），点了打开整页仪表板。
+// - 不改 WhatsApp 自己的画面结构：图示和仪表板都挂在 <body> 外层的 closed shadow DOM，用位置对齐侧栏
+// - 仪表板不用 iframe：WhatsApp 网页有 Cross-Origin-Embedder-Policy: require-corp，iframe 会被 Chrome 挡掉
+//   （「拒绝连线」）。改成把仪表板画面放进另一层 closed shadow DOM，WhatsApp 网页读不到里面
+// - 侧栏还没载入 / 找不到 → 不显示图示（插件弹窗的柱状图按钮也能打开仪表板）
+(() => {
+  // 插件更新后会再放一份进来：先把旧的那份拿掉
+  document.querySelectorAll("[data-wa-assistant-nav]").forEach((n) => n.remove());
+
+  const host = document.createElement("div");
+  host.setAttribute("data-wa-assistant-nav", "");
+  host.style.cssText = "position:fixed;z-index:2147483100;left:0;top:0;width:0;height:0;";
+  const root = host.attachShadow({ mode: "closed" });
+  root.innerHTML = `
+<style>
+:host { all: initial; }
+.btn { z-index: 3; position: fixed; display: none; align-items: center; justify-content: center; padding: 0; margin: 0;
+  border: 0; border-radius: 50%; background: transparent; cursor: pointer; transition: background-color .15s ease; }
+.btn.show { display: flex; }
+.btn:hover { background: rgba(11,20,26,.08); }
+.btn:focus-visible { outline: 2px solid #00a884; outline-offset: 2px; }
+.btn.on, .btn.on:hover { background: transparent; }
+/* 打开时：侧栏最左边一条短短的黄色竖线（AI+ 的黄色），不加底色 */
+.tab { position: fixed; display: none; width: 4px; border-radius: 0 3px 3px 0; background: #f5c83b; pointer-events: none; z-index: 2; }
+.tab.show { display: block; }
+.count { position: absolute; top: 1px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 9px; background: #00a884; color: #fff; border: 2px solid #f0f2f5;
+  font: 600 11px/14px "Segoe UI", "Helvetica Neue", Helvetica, -apple-system, sans-serif; text-align: center; display: none; }
+.count.show { display: block; }
+.logo { width: 28px; height: 28px; display: block; }
+.tip { z-index: 4; position: fixed; display: none; pointer-events: none; white-space: nowrap;
+  font: 500 13px/1.3 "Segoe UI", "Helvetica Neue", Helvetica, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #111b21; color: #ffffff; padding: 6px 10px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.tip.show { display: block; }
+.panel { z-index: 1; position: fixed; top: 0; bottom: 0; right: 0; display: none; background: #f0f2f5; box-shadow: -1px 0 0 #e9edef; }
+.panel.show { display: block; }
+.loading { font: 14px "Segoe UI", -apple-system, sans-serif; color: #667781; padding: 40px; }
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+<button class="btn" id="btn" aria-label="AI for Business 仪表板" aria-expanded="false">
+  <svg class="logo" aria-hidden="true" viewBox="0 0 26 26"><rect width="26" height="26" rx="7" fill="#f5c83b"/><g transform="translate(6.25 4.64) scale(0.034)"><path fill="#111111" fill-rule="evenodd" d="M1 414L121 78H200L320 414H247L222 340H95L68 414ZM159 147L204 284H113Z"/><rect x="324" y="78" width="72" height="337" fill="#111111"/><rect x="438" y="-6" width="46" height="138" rx="6" fill="#ffffff"/><rect x="400" y="41" width="130" height="46" rx="6" fill="#ffffff"/></g><g transform="translate(20.7 20.7) scale(.88) translate(-20 -20)"><circle cx="20" cy="20" r="5.9" fill="#ffffff"/><svg x="15.1" y="15.1" width="9.8" height="9.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#25d366"/><path fill="#ffffff" fill-rule="evenodd" d="M12 4.1a7.9 7.9 0 0 0-6.8 11.9l-1.1 4 4.1-1.1A7.9 7.9 0 1 0 12 4.1zm0 1.45a6.45 6.45 0 1 1-3.3 12l-.25-.15-2.4.65.65-2.35-.16-.26A6.45 6.45 0 0 1 12 5.55z"/><path fill="#ffffff" d="M9.6 8.2c-.17-.38-.35-.39-.51-.4h-.44a.85.85 0 0 0-.62.29 2.6 2.6 0 0 0-.81 1.93c0 1.14.83 2.24.94 2.39.12.15 1.61 2.57 3.98 3.5 1.97.78 2.37.62 2.8.58.43-.04 1.38-.56 1.57-1.11.2-.55.2-1.02.14-1.11-.06-.1-.21-.16-.45-.27-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.75-.74.9-.14.16-.27.18-.5.06a6.3 6.3 0 0 1-1.86-1.15 7 7 0 0 1-1.29-1.6c-.13-.24 0-.36.1-.48.11-.1.24-.27.36-.41.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.51-1.28-.72-1.73z"/></svg></g></svg>
+  <span class="count" id="count" aria-hidden="true"></span>
+</button>
+<div class="tab" id="tab" aria-hidden="true"></div>
+<div class="tip" id="tip" role="tooltip">AI for Business · 仪表板</div>
+<div class="panel" id="panel" role="dialog" aria-label="AI for Business 仪表板"></div>`;
+  AB_LANG_READY.then(() => localizeDOM(root, { "AI for Business 仪表板": "AI for Business dashboard", "AI for Business · 仪表板": "AI for Business · Dashboard" }));
+  document.documentElement.appendChild(host);
+
+  const btn = root.getElementById("btn");
+  const tip = root.getElementById("tip");
+  const panel = root.getElementById("panel");
+  const tab = root.getElementById("tab");
+  const countEl = root.getElementById("count");
+  let open = false;
+  let railRight = 0;
+  let dash = null;      // mount() 回传的东西
+  let assets = null;    // 仪表板的 HTML / CSS（向背景程序拿一次）
+
+  // 找左边侧栏：从画面最左边那一条，由上往下点名，收集一个个图示按钮
+  function railItems() {
+    const seen = new Set();
+    const items = [];
+    for (const x of [32, 30, 36, 28]) {
+      for (let y = 8; y < innerHeight - 8; y += 6) {
+        for (const el of document.elementsFromPoint(x, y)) {
+          if (el === host) continue;
+          const c = el.closest('button,[role="button"],a,[tabindex="0"],[tabindex="-1"]');
+          if (!c || seen.has(c)) { if (c) break; continue; }
+          const r = c.getBoundingClientRect();
+          if (r.width >= 24 && r.width <= 64 && r.height >= 24 && r.height <= 64 && r.left < 40) {
+            seen.add(c);
+            items.push({ c, r });
+          }
+          break;
+        }
+      }
+      if (items.length >= 3) break;
+    }
+    return items.sort((a, b) => a.r.top - b.r.top);
+  }
+
+  function findRail() {
+    const items = railItems();
+    if (items.length < 3) return null;
+    // 上面一组（聊天、通话、动态、频道、社群、Meta AI）：画面上半部、彼此靠近的那些
+    const top = [];
+    for (const it of items) {
+      if (it.r.top > innerHeight * 0.6) break;
+      if (top.length && it.r.top - top[top.length - 1].r.bottom > 120) break;
+      top.push(it);
+    }
+    if (top.length < 2) return null;
+    const last = top[top.length - 1]; // 通常是 Meta AI
+    // 间距：取上面这组图示之间最常见的空隙
+    const gaps = [];
+    for (let i = 1; i < top.length; i++) gaps.push(Math.round(top[i].r.top - top[i - 1].r.bottom));
+    gaps.sort((a, b) => a - b);
+    const gap = Math.max(4, Math.min(24, gaps[Math.floor(gaps.length / 2)] ?? 8));
+    // 侧栏右边界：图示所在、又高又窄的那一层
+    let right = Math.max(...items.map((it) => it.r.right)) + 8;
+    let el = last.c;
+    for (let i = 0; i < 14 && el && el !== document.body; i++, el = el.parentElement) {
+      const r = el.getBoundingClientRect();
+      if (r.height > innerHeight * 0.6 && r.width < 120 && r.width >= last.r.width) { right = r.right; break; }
+    }
+    return { anchor: last.r, gap, right };
+  }
+
+  function place() {
+    const rail = findRail();
+    if (rail) {
+      const a = rail.anchor;
+      const size = Math.round(Math.max(36, Math.min(40, a.width - 8))); // 留空，高亮的圆不碰侧栏右边
+      btn.style.width = btn.style.height = size + "px";
+      btn.style.left = Math.round(a.left + (a.width - size) / 2) + "px";
+      btn.style.top = Math.round(a.bottom + rail.gap) + "px";
+      btn.style.bottom = "";
+      railRight = Math.round(rail.right);
+    } else {
+      // 侧栏还没载入（或 WhatsApp 改版找不到）→ 先不显示图示；插件弹窗里也能打开仪表板
+      btn.classList.remove("show");
+      if (!open) return;
+      railRight = 0;
+      panel.style.left = "0px";
+      return;
+    }
+    btn.classList.add("show");
+    panel.style.left = railRight + "px";
+    // 黄色竖线：贴着侧栏最左边，跟按钮垂直置中
+    const br = btn.getBoundingClientRect();
+    const h = Math.round(br.height * 0.6);
+    tab.style.left = "0px";
+    tab.style.top = Math.round(br.top + (br.height - h) / 2) + "px";
+    tab.style.height = h + "px";
+    tab.classList.toggle("show", open && railRight > 0);
+  }
+
+  async function showDashboard() {
+    panel.replaceChildren(Object.assign(document.createElement("div"), { className: "loading", textContent: tr("载入中…", "Loading…") }));
+    panel.classList.add("show");
+    // 插件重新载入 / 更新后，这一页的旧程序跟插件断线了
+    if (!chrome.runtime?.id) {
+      panel.firstChild.textContent = tr("插件刚更新过，这一页跟插件断线了。请重新整理 WhatsApp 页面（⌘R / Ctrl+R）。", "The extension was just updated, so this page lost its connection. Reload WhatsApp (⌘R / Ctrl+R).");
+      return;
+    }
+    try {
+      if (!assets) {
+        const r = await chrome.runtime.sendMessage({ type: "dash_assets" });
+        if (!r?.ok) throw new Error("no assets");
+        assets = r;
+      }
+    } catch (_) {
+      panel.firstChild.textContent = chrome.runtime?.id
+        ? tr("仪表板载入失败。请重新整理 WhatsApp 页面再试。", "The dashboard failed to load. Reload WhatsApp and try again.")
+        : tr("插件刚更新过，这一页跟插件断线了。请重新整理 WhatsApp 页面（⌘R / Ctrl+R）。", "The extension was just updated, so this page lost its connection. Reload WhatsApp (⌘R / Ctrl+R).");
+      return;
+    }
+    if (!open) return;
+    // 第二层 closed shadow DOM：仪表板的样式不会影响 WhatsApp，WhatsApp 也读不到里面
+    const box = document.createElement("div");
+    box.style.cssText = "position:absolute;inset:0;";
+    const sr = box.attachShadow({ mode: "closed" });
+    const doc = new DOMParser().parseFromString(assets.html, "text/html");
+    doc.querySelectorAll("script,link,title,meta").forEach((n) => n.remove());
+    const style = document.createElement("style");
+    style.textContent = ":host{all:initial;}\n" + assets.css;
+    const page = document.createElement("div");
+    page.className = "page";
+    page.style.height = "100%";
+    for (const n of [...doc.body.childNodes]) page.appendChild(document.importNode(n, true));
+    sr.append(style, page);
+    panel.replaceChildren(box);
+    const api = globalThis.__waAssistantDashboard;
+    if (!api) { panel.replaceChildren(Object.assign(document.createElement("div"), { className: "loading", textContent: tr("仪表板程序没载入，请重新整理这一页。", "The dashboard didn't load. Please reload this page.") })); return; }
+    dash = api.mount(sr, { embed: true, onClose: () => setOpen(false) });
+  }
+
+  function setOpen(v) {
+    open = v;
+    btn.classList.toggle("on", v);
+    tab.classList.toggle("show", v && railRight > 0);
+    btn.setAttribute("aria-expanded", String(v));
+    tip.classList.remove("show");
+    if (v) {
+      place();
+      showDashboard();
+    } else {
+      try { dash?.destroy(); } catch (_) {}
+      dash = null;
+      panel.classList.remove("show");
+      panel.replaceChildren();
+      btn.focus();
+    }
+  }
+
+  btn.addEventListener("click", (e) => { if (e.isTrusted) setOpen(!open); });
+  btn.addEventListener("mouseenter", () => {
+    const r = btn.getBoundingClientRect();
+    tip.style.left = r.right + 10 + "px";
+    tip.style.top = r.top + r.height / 2 - 14 + "px";
+    if (!open) tip.classList.add("show");
+  });
+  btn.addEventListener("mouseleave", () => tip.classList.remove("show"));
+
+  document.addEventListener("keydown", (e) => { if (open && e.key === "Escape") setOpen(false); }, true);
+  // 点侧栏其他图示（聊天、动态…）→ 关掉仪表板，回到 WhatsApp
+  document.addEventListener("pointerdown", (e) => {
+    if (open && e.isTrusted && e.clientX < railRight && !e.composedPath().includes(host)) setOpen(false);
+  }, true);
+
+  // 图示上的数字：还没用的 AI 草稿（近 7 天、还没回、没按「不用了」）
+  async function updateCount() {
+    if (!chrome.runtime?.id) { countEl.classList.remove("show"); return; }
+    let n = 0;
+    try {
+      const { drafts } = await chrome.storage.local.get("drafts");
+      const since = Date.now() - 7 * 86400000;
+      n = (Array.isArray(drafts) ? drafts : []).filter((d) =>
+        (d.status === "pending" || d.status === "inserted" || d.status === "copied") && !d.actual_reply && Date.parse(d.created_at) >= since).length;
+    } catch (_) {}
+    countEl.textContent = n > 99 ? "99+" : String(n);
+    countEl.classList.toggle("show", n > 0);
+    const label = n ? tr(`AI for Business 仪表板（${n} 条 AI 草稿还没用）`, `AI for Business dashboard (${n} unused AI drafts)`) : tr("AI for Business 仪表板", "AI for Business dashboard");
+    btn.setAttribute("aria-label", label);
+    tip.textContent = n ? tr(`AI for Business · ${n} 条草稿还没用`, `AI for Business · ${n} unused drafts`) : tr("AI for Business · 仪表板", "AI for Business · Dashboard");
+  }
+  try {
+    chrome.storage.onChanged.addListener((c, area) => {
+      if (area !== "local") return;
+      if (c.drafts) updateCount();
+      // 换了语言：重新打开仪表板，画面整个换成新语言
+      if (c.ui_lang) { updateCount(); if (open) { setOpen(false); setTimeout(() => setOpen(true), 50); } }
+    });
+  } catch (_) {}
+  updateCount();
+
+  // 插件弹窗按「仪表板」→ 在这里打开
+  try {
+    chrome.runtime.onMessage.addListener((m, sender) => {
+      if (sender.id === chrome.runtime.id && m?.type === "open_panel" && !open) setOpen(true);
+    });
+  } catch (_) {}
+  // 弹窗要求打开、但那时 WhatsApp 还没载入：侧栏出现后自动打开（2 分钟内有效）
+  let pendingChecked = false;
+  async function maybeOpenPending() {
+    if (pendingChecked || !btn.classList.contains("show") || !chrome.runtime?.id) return;
+    pendingChecked = true;
+    const { open_dash_at: t } = await chrome.storage.local.get("open_dash_at");
+    if (t && Date.now() - t < 120000) { await chrome.storage.local.remove("open_dash_at"); if (!open) setOpen(true); }
+  }
+
+  const tick = setInterval(() => {
+    // 插件被重新载入了：这一份已经没用，收起来（新的那份会接手）
+    if (!chrome.runtime?.id) { clearInterval(tick); if (!open) host.remove(); return; }
+    if (!document.hidden) { place(); maybeOpenPending(); }
+  }, 1000);
+  window.addEventListener("resize", place);
+  place();
+})();

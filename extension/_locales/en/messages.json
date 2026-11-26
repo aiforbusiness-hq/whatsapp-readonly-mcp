@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "AI for Business Chat Assistant"
+  },
+  "extShortName": {
+    "message": "AI+ Chat"
+  },
+  "extDescription": {
+    "message": "Unofficial helper for WhatsApp Web: Claude or ChatGPT reads your chats and drafts replies. Never sends. Not affiliated with Meta."
+  }
+}

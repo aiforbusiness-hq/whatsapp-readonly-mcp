@@ -1,0 +1,28 @@
+{
+  "name": "chat-assistant",
+  "displayName": "AI for Business Chat Assistant",
+  "version": "0.12.0",
+  "description": "Reads your own WhatsApp Web open in Chrome: who is waiting for your reply, group summaries, and reply drafts (saved as drafts, never sent). Works with the AI for Business Chrome extension. Everything stays on your computer; no outside servers. Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.",
+  "author": {
+    "name": "AI for Business",
+    "url": "https://aiclassmalaysia.com"
+  },
+  "homepage": "https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp",
+  "keywords": [
+    "whatsapp",
+    "mcp",
+    "chrome-extension",
+    "drafts"
+  ],
+  "mcpServers": {
+    "chat-assistant": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/server.js"
+      ]
+    }
+  },
+  "icon": "./assets/icon.png",
+  "license": "MIT",
+  "repository": "https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp"
+}
