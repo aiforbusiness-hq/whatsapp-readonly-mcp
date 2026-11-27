@@ -6,36 +6,6 @@
 
 **The secure, private WhatsApp MCP: your AI talks straight to your own WhatsApp Web. No relay, no servers in between, never sends a message by itself.**
 
-## Install: copy this prompt into your AI
-
-Paste it into **Claude Code**, **Codex** or **ChatGPT (Work mode)**. They can run the install for you. Only using Claude Desktop? Download `aiforbusiness-chat-assistant.mcpb` from [Releases](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/releases/latest), double-click it, then do steps 4 and 5 below yourself.
-
-```text
-Install "AI for Business Chat Assistant" (https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp) on this computer.
-Do one step at a time, tell me the result, and stop and ask me if anything fails or needs my decision.
-Never send, forward, delete or mark as read any WhatsApp message. Do not change anything not listed here.
-
-1. Run "node -v". It must be version 18 or newer. If Node.js is missing or older, tell me to install the LTS version from https://nodejs.org, then stop.
-2. In my Downloads folder, make a folder "AIforBusiness-Chat-Assistant-download". Download
-   https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/releases/latest/download/SHA256SUMS.txt
-   and, from the same releases/latest/download/ address, both files named inside it (the .zip and aiforbusiness-chat-assistant.mcpb).
-   Check both against SHA256SUMS.txt (Mac/Linux: shasum -a 256 -c SHA256SUMS.txt; Windows: certutil -hashfile <file> SHA256).
-   If a checksum does not match, delete the files and stop. Then unzip the .zip there.
-3. Connect the AI app you are running in:
-   - Claude Code: claude plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
-                  then: claude plugin install aiforbusiness-chat-assistant@aiforbusiness
-   - Codex or ChatGPT: codex plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
-                       then: codex plugin add aiforbusiness-chat-assistant@aiforbusiness
-   - If I also use Claude Desktop: open the downloaded aiforbusiness-chat-assistant.mcpb and tell me to press Install.
-4. Chrome extension: open chrome://extensions in Google Chrome for me, then tell me to turn on "Developer mode",
-   click "Load unpacked" and choose the "extension" folder inside the unzipped AIforBusiness-Chat-Assistant folder.
-   Show me the full path of that folder. Wait until I say it is done.
-5. Tell me to fully quit and reopen this AI app, open https://web.whatsapp.com in Chrome and log in,
-   then ask "What's my WhatsApp status?". It will show a 6-digit pairing code to type into the extension (valid 3 minutes).
-```
-
-Claude, ChatGPT or Codex reads the WhatsApp Web tab you already have open, finds who is waiting for your reply, summarises groups and saves reply drafts. **Private:** everything runs on your computer, and your chats never pass through us. **Secure:** the plugin talks to the Chrome extension over `127.0.0.1` only, after a 6-digit pairing. There is no relay and no server of ours in between, and no new linked device on your WhatsApp account.
-
 ![How it works: your AI app, the local plugin and the Chrome extension with WhatsApp Web, all on your computer, connected over 127.0.0.1. No relay or outside server.](docs/images/architecture.png)
 
 [![tests](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml)
@@ -51,7 +21,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install-copy-this-prompt-into-your-ai) · [Tools](#mcp-tools) · [Secure & private](#-secure--private-by-design) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
+[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Secure & private](#-secure--private-by-design) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
 
 ---
 
@@ -96,29 +66,36 @@ Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 You do not have to say "WhatsApp": the AI reads your chats and saves reply drafts on its own when a question is about messages, customers or replies. A draft appears above the WhatsApp message box and first on the extension's Overview page, and **you** press send.
 
-## Compatibility
-
-| App | Mode | Works | How |
-|---|---|:---:|---|
-| Claude Desktop | Chat | ✅ | `aiforbusiness-chat-assistant.mcpb` desktop extension |
-| Claude Code | CLI / desktop | ✅ | Plugin marketplace in this repo |
-| ChatGPT desktop | **Work** | ✅ | Plugin marketplace in this repo (installed through Codex) |
-| ChatGPT desktop | **Chat** | ❌ | Chat mode can't use local plugins. Switch to Work |
-| Codex | CLI / desktop | ✅ | Plugin marketplace in this repo |
-| Claude or ChatGPT on the web or phone | — | ❌ | They can't reach a program on your computer |
-| Any other MCP client | stdio | ✅ | `node plugins/aiforbusiness-chat-assistant/server/server.js` |
-
-Needs Google Chrome (version 116 or newer), WhatsApp Web logged in, and Node.js 18 or newer. Runs on macOS and Windows.
-
 ## Install
 
-### 1. Chrome extension
+### Option A: let your AI install it
+
+Copy this into **Claude Code**, **Codex** or **ChatGPT (Work mode)**:
+
+```text
+Install AI for Business Chat Assistant from https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp on this computer.
+Go one step at a time, tell me each result, and stop if anything fails. Never send, delete or mark any WhatsApp message.
+1. Check "node -v" is 18 or newer; if not, tell me to install Node.js LTS from nodejs.org and stop.
+2. Into my Downloads folder, download SHA256SUMS.txt and the two files it lists from the repo's releases/latest/download/,
+   check the checksums (stop if any differ), then unzip the .zip.
+3. Install the plugin for this app. Claude Code: "claude plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp",
+   then "claude plugin install aiforbusiness-chat-assistant@aiforbusiness". Codex/ChatGPT: the same with "codex plugin marketplace add"
+   and "codex plugin add". If I use Claude Desktop, open the downloaded .mcpb file and tell me to press Install.
+4. Open chrome://extensions and guide me: Developer mode on, Load unpacked, choose the unzipped "extension" folder (show its path).
+5. Tell me to restart this app, open web.whatsapp.com, and ask "What's my WhatsApp status?" for the 6-digit pairing code.
+```
+
+Only using Claude Desktop? Do Option B.
+
+### Option B: install it yourself
+
+#### 1. Chrome extension
 
 1. Download the release zip, or build it yourself: `sh mcpb/build.sh && sh scripts/build-release.sh`. The zip lands in `dist/`.
 2. Open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked**, and choose the `extension` folder.
 3. Open `https://web.whatsapp.com` and log in.
 
-### 2. Connect your AI app (pick one)
+#### 2. Connect your AI app (pick one)
 
 **Claude Desktop:** double-click `aiforbusiness-chat-assistant.mcpb`, then press **Install**.
 
@@ -145,7 +122,7 @@ codex plugin add aiforbusiness-chat-assistant@aiforbusiness
 { "mcpServers": { "whatsapp-readonly": { "command": "node", "args": ["/path/to/plugins/aiforbusiness-chat-assistant/server/server.js"] } } }
 ```
 
-### 3. Pair once
+#### 3. Pair once
 
 Ask your AI: "What's my WhatsApp status?" It shows a 6-digit code such as `123 456`. Click the extension icon in Chrome and type the code within 3 minutes. You only do this once.
 
@@ -166,6 +143,20 @@ Step-by-step guide for students (Chinese): [`docs/安装说明.md`](docs/安装�
 | `list_drafts` | read | Drafts, and what you actually sent, for comparison |
 
 Every tool declares MCP annotations (`readOnlyHint`, `destructiveHint: false`, `idempotentHint`, `openWorldHint`), so the AI app can tell reading from writing.
+
+## Compatibility
+
+| App | Mode | Works | How |
+|---|---|:---:|---|
+| Claude Desktop | Chat | ✅ | `aiforbusiness-chat-assistant.mcpb` desktop extension |
+| Claude Code | CLI / desktop | ✅ | Plugin marketplace in this repo |
+| ChatGPT desktop | **Work** | ✅ | Plugin marketplace in this repo (installed through Codex) |
+| ChatGPT desktop | **Chat** | ❌ | Chat mode can't use local plugins. Switch to Work |
+| Codex | CLI / desktop | ✅ | Plugin marketplace in this repo |
+| Claude or ChatGPT on the web or phone | — | ❌ | They can't reach a program on your computer |
+| Any other MCP client | stdio | ✅ | `node plugins/aiforbusiness-chat-assistant/server/server.js` |
+
+Needs Google Chrome (version 116 or newer), WhatsApp Web logged in, and Node.js 18 or newer. Runs on macOS and Windows.
 
 ## FAQ
 
