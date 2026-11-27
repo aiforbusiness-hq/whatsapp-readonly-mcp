@@ -359,7 +359,7 @@ export class Bridge {
     const ready = (msg) => {
       c.state = "ready";
       ws.maxMessage = undefined;
-      ws.send({ ...msg, v: PROTOCOL, server: "chat-assistant-mcp", client: this.clientName, clients: this.clients(), peers: this.peers() });
+      ws.send({ ...msg, v: PROTOCOL, server: "aiforbusiness-chat-assistant-mcp", client: this.clientName, clients: this.clients(), peers: this.peers() });
       this.wake();
     };
     ws.onmessage = (text) => {
@@ -378,7 +378,7 @@ export class Bridge {
           ws.send({ type: "hello_auth", v: PROTOCOL, ns: c.ns, proof: helloProof(s, "srv", this.port, c.ne, c.ns) });
         } else {
           c.state = "need_pair";
-          ws.send({ type: "need_pair", v: PROTOCOL, server: "chat-assistant-mcp" });
+          ws.send({ type: "need_pair", v: PROTOCOL, server: "aiforbusiness-chat-assistant-mcp" });
           log("Extension connected, waiting for pairing");
         }
       } else if (m.type === "auth") {
@@ -394,7 +394,7 @@ export class Bridge {
         // the extension's secret did not match ours (e.g. it was reset): pair again
         if (c.state !== "auth") return;
         c.state = "need_pair";
-        ws.send({ type: "need_pair", v: PROTOCOL, server: "chat-assistant-mcp" });
+        ws.send({ type: "need_pair", v: PROTOCOL, server: "aiforbusiness-chat-assistant-mcp" });
       } else if (m.type === "pair_start") {
         if (c.state !== "need_pair" || c.pairing) return;
         if (this.lockedOut) {

@@ -71,7 +71,7 @@ const POPUP = { id: "hmajmekaiaiilhneebgbnchonfkblndb", url: "chrome-extension:/
 const WA = { id: "hmajmekaiaiilhneebgbnchonfkblndb", tab: { id: 1, incognito: false }, url: "https://web.whatsapp.com/" };
 const ask = (msg, sender = POPUP) => new Promise((r) => onMessage(msg, sender, r));
 
-const { Bridge } = await import(pathToFileURL(join(ROOT, "plugins/chat-assistant/server/lib/bridge.js")).href);
+const { Bridge } = await import(pathToFileURL(join(ROOT, "plugins/aiforbusiness-chat-assistant/server/lib/bridge.js")).href);
 routes.set(BASE, BASE); // the real server sits on the first test port
 const bridge = new Bridge();
 await bridge.start();

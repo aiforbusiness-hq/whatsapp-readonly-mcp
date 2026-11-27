@@ -365,7 +365,7 @@ function renderSetup() {
     $("setupTitle").textContent = tr("还没连上 AI", "AI not connected yet");
     $("setupText").textContent = tr("下面的统计照样看得到。要让 Claude / ChatGPT 帮你读信息、起草回复，先连一次：", "Your stats below still work. To let Claude / ChatGPT read messages and draft replies, connect once:");
     for (const html of [
-      [tr("装 AI 那边：", "Install the AI side: "), tr("Claude 桌面版双击 chat-assistant.mcpb；Claude Code 或 ChatGPT 桌面版装插件（看安装说明）。", "Claude desktop: double-click chat-assistant.mcpb. Claude Code or ChatGPT desktop: install the plugin (see the install guide).")],
+      [tr("装 AI 那边：", "Install the AI side: "), tr("Claude 桌面版双击 aiforbusiness-chat-assistant.mcpb；Claude Code 或 ChatGPT 桌面版装插件（看安装说明）。", "Claude desktop: double-click aiforbusiness-chat-assistant.mcpb. Claude Code or ChatGPT desktop: install the plugin (see the install guide).")],
       [tr("在 AI 里问：", "Ask your AI: "), tr("「WhatsApp 状态」。它会回你一个 6 位数配对码。", "\"WhatsApp status\". It replies with a 6-digit pairing code.")],
       [tr("输入配对码：", "Enter the code: "), tr("填在下面，按「配对」。只要做一次。", "type it below and press Pair. You only do this once.")]
     ]) steps.append(el("li", {}, el("b", { text: html[0] }), html[1]));
@@ -1062,9 +1062,9 @@ function renderExportCount() {
   const m = inRange(DATA.activity.log, (x) => x.time).length;
   $("exportCount").textContent = tr(`这个范围：${n} 条草稿 · ${m} 条 AI 活动纪录`, `In this range: ${n} drafts · ${m} AI activity records`);
 }
-// 设定 → 语言：跟浏览器 / English / 中文（存在 chrome.storage.local 的 ui_lang）
+// 设定 → 语言：English（默认）/ 中文 / 跟浏览器（存在 chrome.storage.local 的 ui_lang）
 function renderLangSeg() {
-  const pref = typeof getUiLangPref === "function" ? getUiLangPref() : "auto";
+  const pref = typeof getUiLangPref === "function" ? getUiLangPref() : "en";
   ROOT.querySelectorAll("#langSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === pref)));
   $("subSettings").textContent = tr("语言：", "Language: ") + ({ auto: tr("跟浏览器", "Same as browser"), en: "English", zh: "中文" }[pref] || "");
 }

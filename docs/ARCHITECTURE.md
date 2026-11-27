@@ -9,7 +9,7 @@ Chrome 插件 + 本机 MCP 程序：让 Claude（桌面版 / Claude Code）或 C
 ## 架构
 
 ```
-Claude / ChatGPT ──stdio(MCP)──▶ plugins/chat-assistant/server/server.js ──ws://127.0.0.1:47821-47830──▶ Chrome 插件 ──▶ web.whatsapp.com
+Claude / ChatGPT ──stdio(MCP)──▶ plugins/aiforbusiness-chat-assistant/server/server.js ──ws://127.0.0.1:47821-47830──▶ Chrome 插件 ──▶ web.whatsapp.com
 ```
 
 每个 AI 对话都会启动一份 server.js，数量没有上限：第一份占端口、连插件（主），其他的经过它（从）；主的关了，由一份从的接手，从第一个端口开始占（`lib/hub.js`）。同时只会有一份主：主的太慢没回应时，新的会等，不会另开一份；万一出现两份，端口号较大的那份会自己退下、并过去。
@@ -30,7 +30,7 @@ Claude / ChatGPT ──stdio(MCP)──▶ plugins/chat-assistant/server/server.
   - `sidebar.js` WhatsApp 左边侧栏的「AI」图示 → 整页仪表板（iframe 嵌插件页面，`use_dynamic_url`）
   - `dashboard.html/js/css` 仪表板：概览统计、AI 活动纪录、草稿 vs 实际、数据安全图、导出（CSV / JSON，存在本机）
   - `background.js` 连本机程序、配对、转送指令
-- `plugins/chat-assistant/` Claude Code / ChatGPT（Codex）插件：只有插件设定、图示和 `server/`（本机 MCP 程序，**零外部套件**：手写 MCP stdio + 最小 WebSocket 服务器）
+- `plugins/aiforbusiness-chat-assistant/` Claude Code / ChatGPT（Codex）插件：只有插件设定、图示和 `server/`（本机 MCP 程序，**零外部套件**：手写 MCP stdio + 最小 WebSocket 服务器）
 - `.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 插件市场（指向上面的插件文件夹）
 - `mcpb/` Claude 桌面版扩展（.mcpb）设定
 - `scripts/build-release.sh` 打包给学员的 zip
@@ -51,8 +51,8 @@ Claude / ChatGPT ──stdio(MCP)──▶ plugins/chat-assistant/server/server.
 
 ## 语言
 
-- Chrome 插件：浏览器语言是中文（zh-*）就用中文，其他一律英文（`extension/i18n.js` 的 `tr(中文, English)`、`localizeDOM()`；插件名称和说明在 `_locales/`）
-- AI 插件 / 本机程序（`plugins/chat-assistant`）：全部英文；AI 会用用户自己的语言回答
+- Chrome 插件：默认英文。用户在仪表板「设定 → 语言」选「中文」才用中文；选「跟浏览器」时，浏览器是中文（zh-*）就用中文（`extension/i18n.js` 的 `tr(中文, English)`、`localizeDOM()`；插件名称和说明在 `_locales/`）
+- AI 插件 / 本机程序（`plugins/aiforbusiness-chat-assistant`）：全部英文；AI 会用用户自己的语言回答
 
 ## 安全设计
 
@@ -77,9 +77,9 @@ node --test tests/hub.test.mjs            # 共用连线测试（用自己的端
 
 插件（这个仓库 / 学员 zip 的根目录本身就是插件市场）：
 
-- Claude Code：`/plugin marketplace add <文件夹或 aiforbusiness-hq/whatsapp-readonly-mcp>` → `/plugin install chat-assistant@aiforbusiness`（`plugins/chat-assistant/.claude-plugin/plugin.json`，`${CLAUDE_PLUGIN_ROOT}`）
-- ChatGPT 桌面版 / Codex：`codex plugin marketplace add <同上>` → `codex plugin add chat-assistant@aiforbusiness`（`plugins/chat-assistant/plugin.json` + `mcp.json` stdio，`${PLUGIN_ROOT}`）
-- Claude 桌面版：`dist/chat-assistant.mcpb`
+- Claude Code：`/plugin marketplace add <文件夹或 aiforbusiness-hq/whatsapp-readonly-mcp>` → `/plugin install aiforbusiness-chat-assistant@aiforbusiness`（`plugins/aiforbusiness-chat-assistant/.claude-plugin/plugin.json`，`${CLAUDE_PLUGIN_ROOT}`）
+- ChatGPT 桌面版 / Codex：`codex plugin marketplace add <同上>` → `codex plugin add aiforbusiness-chat-assistant@aiforbusiness`（`plugins/aiforbusiness-chat-assistant/plugin.json` + `mcp.json` stdio，`${PLUGIN_ROOT}`）
+- Claude 桌面版：`dist/aiforbusiness-chat-assistant.mcpb`
 
 ## 文件
 

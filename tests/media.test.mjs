@@ -26,7 +26,7 @@ test("the reader still cannot send, download, open chats or use the network", ()
 });
 
 test("MCP: a picture becomes an image attachment, a file becomes a resource, text stays text", async () => {
-  const { TOOLS } = await import("../plugins/chat-assistant/server/lib/tools.js");
+  const { TOOLS } = await import("../plugins/aiforbusiness-chat-assistant/server/lib/tools.js");
   const t = TOOLS.find((x) => x.name === "get_media");
   const c = t.content({ ok: true, content: "full", image: { mime: "image/jpeg", data: "QUJD", width: 2, height: 1 } });
   assert.deepEqual(c[1], { type: "image", data: "QUJD", mimeType: "image/jpeg" });
@@ -137,7 +137,7 @@ test("real reader in Chrome: every kind of message", { skip: !CHROME && "Chrome 
 test("end to end over MCP: get_media reaches the extension and comes back as an image, also from a second AI session", async () => {
   const dir = mkdtempSync(join(tmpdir(), "wa-mm-")), base = 52000 + (process.pid % 300) * 10, all = [];
   const start = () => {
-    const p = spawn(process.execPath, [join(ROOT, "plugins/chat-assistant/server/server.js")], { env: { ...process.env, WA_READONLY_DATA_DIR: dir, WA_READONLY_TEST_PORT_BASE: String(base) }, stdio: ["pipe", "pipe", "ignore"] });
+    const p = spawn(process.execPath, [join(ROOT, "plugins/aiforbusiness-chat-assistant/server/server.js")], { env: { ...process.env, WA_READONLY_DATA_DIR: dir, WA_READONLY_TEST_PORT_BASE: String(base) }, stdio: ["pipe", "pipe", "ignore"] });
     all.push(p); let buf = "", n = 1; const w = new Map();
     p.stdout.on("data", (d) => { buf += d; let i; while ((i = buf.indexOf("\n")) >= 0) { const m = JSON.parse(buf.slice(0, i)); buf = buf.slice(i + 1); w.get(m.id)?.(m.result); } });
     return (method, params) => new Promise((r) => { w.set(n, r); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: n++, method, params }) + "\n"); });

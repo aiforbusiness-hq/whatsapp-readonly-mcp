@@ -1,11 +1,10 @@
 {
-  "name": "chat-assistant-mcp",
-  "version": "0.12.0",
+  "name": "aiforbusiness-chat-assistant-mcp",
+  "version": "0.12.1",
   "private": true,
   "description": "Local, read-only MCP server for WhatsApp Web (works with the AI for Business Chrome extension). No dependencies, no outbound network requests.",
   "type": "module",
-  "main": "server.js",
-  "bin": { "chat-assistant-mcp": "server.js" },
+  "bin": { "aiforbusiness-chat-assistant-mcp": "server.js" },
   "engines": { "node": ">=18" },
   "license": "MIT",
   "dependencies": {}

@@ -1,6 +1,6 @@
 #!/bin/sh
 # 打包给学员的 zip：dist/AIforBusiness-Chat-Assistant-v<版本>.zip
-# 内含：extension/、plugins/chat-assistant/（Claude Code / ChatGPT 插件）、chat-assistant.mcpb、安装说明.md、PRIVACY.md
+# 内含：extension/、plugins/aiforbusiness-chat-assistant/（Claude Code / ChatGPT 插件）、aiforbusiness-chat-assistant.mcpb、安装说明.md、PRIVACY.md
 # 不下载任何东西；只用系统自带的 zip。
 set -eu
 cd "$(dirname "$0")/.."
@@ -24,11 +24,11 @@ mkdir -p "$STAGE/extension/icons"
 cp extension/*.js extension/*.html extension/*.css extension/manifest.json "$STAGE/extension/"
 cp extension/icons/*.png extension/icons/*.svg "$STAGE/extension/icons/"
 cp -R extension/_locales "$STAGE/extension/"
-cp dist/chat-assistant.mcpb "$STAGE/"
+cp dist/aiforbusiness-chat-assistant.mcpb "$STAGE/"
 cp docs/安装说明.md "$STAGE/安装说明.md"
 cp PRIVACY.md LICENSE "$STAGE/"
 # Claude Code / ChatGPT（Codex）插件：解压后的文件夹本身就是插件市场；插件本身只有设定、图示和本机程序
-P=plugins/chat-assistant
+P=plugins/aiforbusiness-chat-assistant
 mkdir -p "$STAGE/.claude-plugin" "$STAGE/.agents/plugins" "$STAGE/$P/.claude-plugin" "$STAGE/$P/assets" "$STAGE/$P/server/lib"
 cp .claude-plugin/marketplace.json "$STAGE/.claude-plugin/"
 cp .agents/plugins/marketplace.json "$STAGE/.agents/plugins/"
@@ -42,7 +42,7 @@ find "$STAGE" -name '.*' -type f -delete
 [ -f "$OUT" ] && rm "$OUT"
 (cd dist/release-stage && zip -qrX "../$NAME-v$VER.zip" "$NAME")
 # 给学生核对用的 SHA-256（另外透过老师的频道发，不要跟压缩档放在同一个地方）
-(cd dist && shasum -a 256 "$NAME-v$VER.zip" chat-assistant.mcpb > SHA256SUMS.txt)
+(cd dist && shasum -a 256 "$NAME-v$VER.zip" aiforbusiness-chat-assistant.mcpb > SHA256SUMS.txt)
 echo "已打包：$OUT"
 cat dist/SHA256SUMS.txt
 unzip -l "$OUT" | tail -n +1

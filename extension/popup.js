@@ -44,7 +44,7 @@ function ago(iso) {
   if (s < 3600) return Math.floor(s / 60) + tr(" 分钟前", " min ago");
   if (s < 86400) return Math.floor(s / 3600) + tr(" 小时前", " h ago");
   if (s < 86400 * 7) return Math.floor(s / 86400) + tr(" 天前", " days ago");
-  return new Date(iso).toLocaleDateString("zh-CN");
+  return new Date(iso).toLocaleDateString(AB_LANG === "zh" ? "zh-CN" : "en-GB");
 }
 function waited(h) {
   if (h == null) return "";

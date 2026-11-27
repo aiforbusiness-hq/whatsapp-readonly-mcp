@@ -3,8 +3,8 @@
   "interface": { "displayName": "AI for Business" },
   "plugins": [
     {
-      "name": "chat-assistant",
-      "source": { "source": "local", "path": "./plugins/chat-assistant" },
+      "name": "aiforbusiness-chat-assistant",
+      "source": { "source": "local", "path": "./plugins/aiforbusiness-chat-assistant" },
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "Productivity",
       "interface": { "displayName": "AI for Business Chat Assistant" }

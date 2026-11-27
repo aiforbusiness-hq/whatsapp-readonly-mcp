@@ -9,8 +9,8 @@
   },
   "plugins": [
     {
-      "name": "chat-assistant",
-      "source": "./plugins/chat-assistant",
+      "name": "aiforbusiness-chat-assistant",
+      "source": "./plugins/aiforbusiness-chat-assistant",
       "description": "Reads WhatsApp Web · read-only, never sends"
     }
   ]

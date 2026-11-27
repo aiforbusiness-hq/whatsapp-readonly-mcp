@@ -130,7 +130,7 @@ test("download_media end to end", { skip: !CHROMIUM && "no Chromium for testing"
   await new Promise((r) => srv.listen(0, "127.0.0.1", r));
 
   const startMcp = () => {
-    const p = spawn(process.execPath, [join(ROOT, "plugins/chat-assistant/server/server.js")], { env: { ...process.env, WA_READONLY_DATA_DIR: join(dir, "data"), WA_READONLY_TEST_PORT_BASE: String(base) }, stdio: ["pipe", "pipe", "ignore"] });
+    const p = spawn(process.execPath, [join(ROOT, "plugins/aiforbusiness-chat-assistant/server/server.js")], { env: { ...process.env, WA_READONLY_DATA_DIR: join(dir, "data"), WA_READONLY_TEST_PORT_BASE: String(base) }, stdio: ["pipe", "pipe", "ignore"] });
     procs.push(p); let buf = "", n = 1; const w = new Map();
     p.stdout.on("data", (d) => { buf += d; let i; while ((i = buf.indexOf("\n")) >= 0) { const m = JSON.parse(buf.slice(0, i)); buf = buf.slice(i + 1); w.get(m.id)?.(m.result); } });
     const rpc = (method, params) => new Promise((r) => { w.set(n, r); p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: n++, method, params }) + "\n"); });
@@ -224,11 +224,13 @@ test("download_media end to end", { skip: !CHROMIUM && "no Chromium for testing"
       const cards = [...document.querySelectorAll("#v-files .file")];
       return { media: d.media.map((x) => ({ id: x.message_id.split("_").pop(), status: x.status, thumb: !!x.thumb, jpeg: (x.thumb || "").startsWith("/9j/"), block: x.block?.code || null, warn: x.warnings.map((w) => w.code), exists: x.exists, note: x.thumb_note })),
         visible: !document.getElementById("v-files").hidden, cards: cards.length, drawn: [...document.querySelectorAll("#v-files canvas")].filter((c) => c.width > 0 && c.width !== 300).length,
-        blockedCards: document.querySelectorAll("#v-files .file.blocked").length, buttons: [...document.querySelectorAll("#v-files button")].map((b) => b.textContent) };
+        blockedCards: document.querySelectorAll("#v-files .file.blocked").length, lang: document.documentElement.lang, title: document.title, langPref: getUiLangPref(), buttons: [...document.querySelectorAll("#v-files button")].map((b) => b.textContent) };
     })()`);
     step(JSON.stringify(dash));
     const by = Object.fromEntries(dash.media.map((x) => [x.id, x]));
     assert.ok(dash.visible);
+    // English by default (tests/i18n.test.mjs covers a Chinese browser)
+    assert.equal(dash.langPref, "en"); assert.equal(dash.lang, "en"); assert.equal(dash.title, "AI for Business Chat Assistant dashboard");
     assert.equal(by.img.status, "saved"); assert.ok(by.img.jpeg, "image preview is a redrawn JPEG"); assert.equal(by.img.exists, true);
     assert.ok(by.video.jpeg, "video preview from WhatsApp's own small picture");
     assert.ok(by.realvid.jpeg, "video preview from a frame of the video itself " + by.realvid.note);

@@ -97,9 +97,10 @@ const B = {
   SPREADSHEET_FORMULA: ["这个表格文件（CSV）里有公式或指令（= + - @ 开头的格子），用 Excel 打开可能执行程序，所以不存。", "This spreadsheet file (CSV) has cells that start with = + - or @ (formulas or commands). Opening it in Excel can run commands, so it is not saved."],
   NOT_CHECKABLE: ["这个文件加密了、太大或太复杂，没办法完整检查，所以不存。", "This file is encrypted, too large or too complex to check fully, so it is not saved."]
 };
+// fill: { key: "same in both" } or { key: ["中文", "English"] }
 const say = (table, code, fill = {}) => {
-  const f = (s) => s.replace(/%(\w)/g, (_, k) => fill[k] ?? "");
-  return { code, zh: f(table[code][0]), en: f(table[code][1]) };
+  const f = (s, i) => s.replace(/%(\w)/g, (_, k) => (Array.isArray(fill[k]) ? fill[k][i] : fill[k]) ?? "");
+  return { code, zh: f(table[code][0], 0), en: f(table[code][1], 1) };
 };
 export const warning = (code) => say(W, code);
 export const block = (code, fill) => say(B, code, fill);
@@ -166,7 +167,7 @@ export function scanner() {
       // 会用 Excel 打开的文字表格：有公式 / 指令就不存
       const sheet = /\.(csv|tsv|tab|prn|dif|sylk)$/i.test(name || "") || /^text\/(csv|tab-separated-values)/i.test(String(mime || ""));
       if (!b && (real === "text" || real === "xml") && sheet && (formula || csvLineBad(csvCarry))) b = block("SPREADSHEET_FORMULA");
-      if (!b && !(real in ALLOWED)) b = block("TYPE_NOT_ALLOWED", { t: typeLabel(real) + " / " + typeLabel(real, true) });
+      if (!b && !(real in ALLOWED)) b = block("TYPE_NOT_ALLOWED", { t: [typeLabel(real), typeLabel(real, true)] });
       if (!b && real !== "office" && hasEocd(tail)) b = block("HIDDEN_ARCHIVE");
       const want = expectedFamily(name, mime), got = FAMILY[real];
       if (!b && want && want !== "other" && want !== got) {

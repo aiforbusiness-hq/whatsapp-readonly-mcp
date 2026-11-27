@@ -44,10 +44,10 @@ Most WhatsApp MCP servers log in as a new linked device and include a "send mess
 
 | AI app | How | Status |
 |---|---|---|
-| Claude Desktop | `chat-assistant.mcpb` desktop extension | Works |
+| Claude Desktop | `aiforbusiness-chat-assistant.mcpb` desktop extension | Works |
 | Claude Code | Plugin marketplace in this repo | Works |
 | ChatGPT desktop / Codex | Plugin marketplace in this repo | Works |
-| Any MCP client | `node plugins/chat-assistant/server/server.js` over stdio | Works |
+| Any MCP client | `node plugins/aiforbusiness-chat-assistant/server/server.js` over stdio | Works |
 
 Needs Google Chrome (version 116 or newer), WhatsApp Web logged in, and Node.js 18 or newer. Runs on macOS and Windows.
 
@@ -61,13 +61,13 @@ Needs Google Chrome (version 116 or newer), WhatsApp Web logged in, and Node.js 
 
 ### 2. Connect your AI app (pick one)
 
-**Claude Desktop:** double-click `chat-assistant.mcpb`, then press **Install**.
+**Claude Desktop:** double-click `aiforbusiness-chat-assistant.mcpb`, then press **Install**.
 
 **Claude Code:**
 
 ```
 /plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
-/plugin install chat-assistant@aiforbusiness
+/plugin install aiforbusiness-chat-assistant@aiforbusiness
 ```
 
 **ChatGPT desktop / Codex:**
@@ -77,13 +77,13 @@ codex plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
 ```
 
 ```bash
-codex plugin add chat-assistant@aiforbusiness
+codex plugin add aiforbusiness-chat-assistant@aiforbusiness
 ```
 
 **Any other MCP client** (stdio):
 
 ```json
-{ "mcpServers": { "whatsapp-readonly": { "command": "node", "args": ["/path/to/plugins/chat-assistant/server/server.js"] } } }
+{ "mcpServers": { "whatsapp-readonly": { "command": "node", "args": ["/path/to/plugins/aiforbusiness-chat-assistant/server/server.js"] } } }
 ```
 
 ### 3. Pair once
@@ -147,7 +147,7 @@ No. It reads the normal WhatsApp Web you already use. No API key, no Meta develo
 
 ## Test cases
 
-58 automated tests run on every push (see the badge). One more end-to-end test runs locally in a throwaway Chromium before each release. All tests use fake WhatsApp data, test ports and a test data folder. They never touch a real account or a real pairing.
+62 automated tests run on every push (see the badge). One more end-to-end test runs locally in a throwaway Chromium before each release. All tests use fake WhatsApp data, test ports and a test data folder. They never touch a real account or a real pairing.
 
 ```bash
 node --test tests/*.test.mjs
@@ -167,6 +167,7 @@ CHROMIUM_PATH=/path/to/chromium node --test tests/download.e2e.mjs
 | [`reader.test.mjs`](tests/reader.test.mjs) | Name lookups cannot be hijacked by look-alike groups or people named "Me"; view-once media is always refused; ambiguous names list exact matches first |
 | [`card.test.mjs`](tests/card.test.mjs) | A draft is only ever filled into the chat it was written for, even while you switch chats |
 | [`storage.test.mjs`](tests/storage.test.mjs) | Clearing drafts or the activity log is never undone by a write in flight; two AI apps saving at once keep both drafts; hostile file names are handled fast |
+| [`i18n.test.mjs`](tests/i18n.test.mjs) | Screens are in English by default, even in a Chinese browser; Chinese only when the user picks it; clearing settings goes back to English |
 | [`download.e2e.mjs`](tests/download.e2e.mjs) | End to end in a real Chromium with the real extension and server: pair, download, refuse malware, and check the My data page |
 
 ## Repository layout
@@ -174,7 +175,7 @@ CHROMIUM_PATH=/path/to/chromium node --test tests/download.e2e.mjs
 | Path | What |
 |---|---|
 | `extension/` | Chrome extension (Manifest V3) |
-| `plugins/chat-assistant/` | Plugin for Claude Code and ChatGPT/Codex, with the local MCP server in `server/` |
+| `plugins/aiforbusiness-chat-assistant/` | Plugin for Claude Code and ChatGPT/Codex, with the local MCP server in `server/` |
 | `mcpb/` | Claude Desktop extension (`.mcpb`) build |
 | `.claude-plugin/`, `.agents/plugins/` | Plugin marketplaces for Claude Code and Codex |
 | `tests/` | Automated tests |

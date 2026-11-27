@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SERVER = join(dirname(fileURLToPath(import.meta.url)), "../plugins/chat-assistant/server/server.js");
+const SERVER = join(dirname(fileURLToPath(import.meta.url)), "../plugins/aiforbusiness-chat-assistant/server/server.js");
 const ORIGIN = "chrome-extension://hmajmekaiaiilhneebgbnchonfkblndb";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 12000) => { const t = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t > ms) throw new Error("timeout: " + fn); await sleep(50); } };
@@ -191,7 +191,7 @@ test("hub refuses: wrong token, any Origin, wrong Host, bad nonce, extra ops; we
     const u0 = await raw(e.b, HUB(e.b)); u0.socket.write(JSON.stringify({ type: "call", id: 1, what: "info" }) + "\n");
     await new Promise((r) => { u0.socket.on("close", r); u0.socket.resume(); });
     // right token, forbidden op
-    const { connectHub, loadToken } = await import("../plugins/chat-assistant/server/lib/hub.js");
+    const { connectHub, loadToken } = await import("../plugins/aiforbusiness-chat-assistant/server/lib/hub.js");
     assert.equal(await connectHub({ port: e.b, token: "f".repeat(64) }), null);
     const line = await connectHub({ port: e.b, token: loadToken(e.dir) });
     for (const op of ["send_message", "mark_read", "open_chat", "constructor"]) {
@@ -251,7 +251,7 @@ test("only listens on 127.0.0.1", async () => {
 
 // ---- only one leader, ever ----
 const leadersNow = async (e) => {
-  const { connectHub, loadToken } = await import("../plugins/chat-assistant/server/lib/hub.js");
+  const { connectHub, loadToken } = await import("../plugins/aiforbusiness-chat-assistant/server/lib/hub.js");
   const token = loadToken(e.dir);
   const ls = await Promise.all(Array.from({ length: 10 }, (_, i) => connectHub({ port: e.b + i, token })));
   const ports = ls.map((l, i) => (l ? e.b + i : 0)).filter(Boolean);

@@ -15,6 +15,6 @@ render() { # $1 尺寸  $2 输出
 for s in 16 32 48 128; do render $s "$PWD/icon$s.png"; done
 # Claude 桌面版扩展（.mcpb）和 Claude Code / ChatGPT 插件：同一个图示
 render 512 "$PWD/../../mcpb/icon.png"
-render 512 "$PWD/../../plugins/chat-assistant/assets/icon.png"
+render 512 "$PWD/../../plugins/aiforbusiness-chat-assistant/assets/icon.png"
 rm -r "$TMP"
 echo "icons written"

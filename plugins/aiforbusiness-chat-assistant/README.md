@@ -7,7 +7,7 @@ Lets Claude read the WhatsApp Web chats you already have open in Google Chrome, 
 ## Install
 
 ```
-/plugin install chat-assistant --marketplace aiforbusiness-hq/whatsapp-readonly-mcp
+/plugin install aiforbusiness-chat-assistant --marketplace aiforbusiness-hq/whatsapp-readonly-mcp
 ```
 
 ## What you need

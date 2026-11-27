@@ -1,6 +1,6 @@
 // SPAKE2 (RFC 9382) on P-256, pure JavaScript (BigInt), no dependencies.
 // The SAME file is used by the Chrome extension (extension/spake2.js) and the local server
-// (plugins/chat-assistant/server/lib/spake2.js); tests/pake.test.mjs checks that both copies are identical.
+// (plugins/aiforbusiness-chat-assistant/server/lib/spake2.js); tests/pake.test.mjs checks that both copies are identical.
 //
 // Why: with a short (6-digit) pairing code, a normal "prove you know the code" message can be cracked offline
 // in seconds. With SPAKE2 each pairing try tests exactly ONE guess, even for an attacker that records everything,

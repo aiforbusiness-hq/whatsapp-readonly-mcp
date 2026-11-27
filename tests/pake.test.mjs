@@ -6,13 +6,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import * as E from "../extension/pairing.js";
-import * as S from "../plugins/chat-assistant/server/lib/auth.js";
+import * as S from "../plugins/aiforbusiness-chat-assistant/server/lib/auth.js";
 import { spakeStart, spakeFinish, _test } from "../extension/spake2.js";
 
 const PORT = 47821, ne = S.nonce(), ns = S.nonce();
 
 test("the extension and the server use the very same SPAKE2 file", () => {
-  assert.equal(readFileSync(new URL("../extension/spake2.js", import.meta.url), "utf8"), readFileSync(new URL("../plugins/chat-assistant/server/lib/spake2.js", import.meta.url), "utf8"));
+  assert.equal(readFileSync(new URL("../extension/spake2.js", import.meta.url), "utf8"), readFileSync(new URL("../plugins/aiforbusiness-chat-assistant/server/lib/spake2.js", import.meta.url), "utf8"));
   assert.equal(E.CODE_DIGITS, 6); assert.equal(S.CODE_DIGITS, 6); assert.equal(E.PROTOCOL, S.PROTOCOL);
 });
 

@@ -1,7 +1,7 @@
 {
-  "name": "chat-assistant",
+  "name": "aiforbusiness-chat-assistant",
   "displayName": "AI for Business Chat Assistant",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Reads your own WhatsApp Web open in Chrome: who is waiting for your reply, group summaries, and reply drafts (saved as drafts, never sent). Works with the AI for Business Chrome extension. Everything stays on your computer; no outside servers. Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.",
   "author": {
     "name": "AI for Business",
@@ -15,7 +15,7 @@
     "drafts"
   ],
   "mcpServers": {
-    "chat-assistant": {
+    "aiforbusiness-chat-assistant": {
       "command": "node",
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/server/server.js"
