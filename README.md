@@ -25,12 +25,6 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 ---
 
-## Benchmark: 2.4–2.8× faster, 3.4–5.3× fewer tokens than browser automation
-
-Same three questions on the same made-up WhatsApp Web page, asked through Claude Code. We compared this plugin with two ways of letting AI read the page itself: [Playwright MCP](https://github.com/microsoft/playwright-mcp) and [Claude in Chrome](https://claude.com/chrome). Every one of the 54 runs answered correctly. [How it was measured](bench/README.md) · [raw results](bench/results/)
-
-![Benchmark: this plugin answers in 8–10 seconds with about 18k tokens; Playwright MCP takes 20–24 seconds and 46k–77k tokens; Claude in Chrome takes 22–28 seconds and 64k–117k tokens](docs/images/benchmark.svg)
-
 ## Why this exists
 
 For people who use AI every day and often need its help with WhatsApp: who is waiting for a reply, what a busy group said, a first draft of an answer. It is a convenience, not a way around WhatsApp.
@@ -40,6 +34,12 @@ For people who use AI every day and often need its help with WhatsApp: who is wa
 - **Not for spam or bulk messaging.** There is no send, broadcast, forward or auto-reply feature, and there never will be.
 - **Doesn't get around WhatsApp.** It reads the WhatsApp Web tab you already use, logged in as you. No new linked device, no unofficial account, no scraping of other people's chats.
 - **Only on your own computer.** It works only on the computer where your Claude or ChatGPT desktop app is open, with WhatsApp Web open in Chrome. Nothing runs in the cloud.
+
+## Benchmark: 2.4–2.8× faster, 3.4–5.3× fewer tokens than browser automation
+
+Same three questions on the same made-up WhatsApp Web page, asked through Claude Code. We compared this plugin with two ways of letting AI read the page itself: [Playwright MCP](https://github.com/microsoft/playwright-mcp) and [Claude in Chrome](https://claude.com/chrome). Every one of the 54 runs answered correctly. [How it was measured](bench/README.md) · [raw results](bench/results/)
+
+![Benchmark: this plugin answers in 8–10 seconds with about 18k tokens; Playwright MCP takes 20–24 seconds and 46k–77k tokens; Claude in Chrome takes 22–28 seconds and 64k–117k tokens](docs/images/benchmark.svg)
 
 ## 🔒 Secure & private by design
 
