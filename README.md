@@ -11,7 +11,7 @@ Claude, ChatGPT or Codex reads the WhatsApp Web tab you already have open, finds
 ![runs locally](https://img.shields.io/badge/data-stays%20on%20your%20computer-green)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-lightgrey)
 
-WhatsApp Readonly MCP is a **read-only [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server plus a Chrome extension** for WhatsApp Web. The Chrome extension reads the WhatsApp Web tab you already have open. The local MCP server gives that data to your AI app on the same computer. Nothing goes through our servers. We run none.
+WhatsApp Readonly MCP is a **[Model Context Protocol](https://modelcontextprotocol.io) (MCP) server plus a Chrome extension** for WhatsApp Web. It reads your chats and saves reply drafts, and **never sends a message by itself**. The Chrome extension reads the WhatsApp Web tab you already have open. The local MCP server gives that data to your AI app on the same computer. Nothing goes through our servers. We run none.
 
 In the stores the product is called **AI for Business Chat Assistant**, by AI for Business.
 
@@ -25,7 +25,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 For people who use AI every day and often need its help with WhatsApp: who is waiting for a reply, what a busy group said, a first draft of an answer. It is a convenience, not a way around WhatsApp.
 
-- **Read-only.** It never sends a message to anyone. Replies are saved as drafts, and you press send yourself.
+- **Never sends a message by itself.** It reads your chats and saves reply drafts; you read each draft and press send yourself.
 - **Not for spam or bulk messaging.** There is no send, broadcast, forward or auto-reply feature, and there never will be.
 - **Doesn't get around WhatsApp.** It reads the WhatsApp Web tab you already use, logged in as you. No new linked device, no unofficial account, no scraping of other people's chats.
 - **Only on your own computer.** It works only on the computer where your Claude or ChatGPT desktop app is open, with WhatsApp Web open in Chrome. Nothing runs in the cloud.
@@ -40,7 +40,7 @@ For people who use AI every day and often need its help with WhatsApp: who is wa
 
 You do not have to say "WhatsApp": the AI reads your chats and saves reply drafts on its own when a question is about messages, customers or replies. A draft appears above the WhatsApp message box and first on the extension's Overview page, and **you** press send.
 
-## Why read-only
+## Why it never sends
 
 Most WhatsApp MCP servers log in as a new linked device and include a "send message" tool. This one is different:
 
@@ -215,7 +215,7 @@ It checks that every version number matches, runs the tests, builds `dist/aiforb
 
 ## Contributing
 
-Issues and pull requests are welcome. Every change must keep the read-only rule: no code that sends, marks as read, deletes or changes anything in WhatsApp, and no outside network requests. Run `node --test tests/*.test.mjs` before opening a pull request.
+Issues and pull requests are welcome. Every change must keep the never-send rule: no code that sends, marks as read, deletes or changes anything in WhatsApp, and no outside network requests. Run `node --test tests/*.test.mjs` before opening a pull request.
 
 ## License
 

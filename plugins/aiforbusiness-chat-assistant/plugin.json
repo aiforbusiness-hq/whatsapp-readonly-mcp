@@ -13,7 +13,7 @@
     "com.openai": {
       "interface": {
         "displayName": "AI for Business Chat Assistant",
-        "shortDescription": "Reads WhatsApp Web · read-only, never sends",
+        "shortDescription": "Reads WhatsApp Web · drafts replies, never sends by itself",
         "developerName": "AI for Business",
         "category": "Productivity",
         "composerIcon": "./assets/icon.png",
