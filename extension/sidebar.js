@@ -99,10 +99,13 @@
     const gap = Math.max(4, Math.min(24, gaps[Math.floor(gaps.length / 2)] ?? 8));
     // 侧栏右边界：图示所在、又高又窄的那一层
     let right = Math.max(...items.map((it) => it.r.right)) + 8;
+    // 往上找：最宽的那一层「又高又窄、贴着画面左边」的就是整条侧栏（里面可能还有一层较窄的，不能停在那层，
+    // 不然仪表板会盖住侧栏右边）；宽到 200px 以上就是主画面了，停
     let el = last.c;
     for (let i = 0; i < 14 && el && el !== document.body; i++, el = el.parentElement) {
       const r = el.getBoundingClientRect();
-      if (r.height > innerHeight * 0.6 && r.width < 120 && r.width >= last.r.width) { right = r.right; break; }
+      if (r.width > 200) break;
+      if (r.height > innerHeight * 0.6 && r.left <= 8 && r.width >= last.r.width) right = Math.max(right, r.right);
     }
     return { anchor: last.r, gap, right };
   }
