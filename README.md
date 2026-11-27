@@ -1,4 +1,6 @@
-# WhatsApp Readonly MCP
+<p align="center"><img src="docs/images/logo.png" width="112" alt="AI for Business Chat Assistant logo"></p>
+
+<h1 align="center">WhatsApp Readonly MCP</h1>
 
 **The private, secure WhatsApp MCP: your AI talks straight to your own WhatsApp Web. No relay, no servers in between, never sends.**
 
@@ -17,7 +19,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Security](#security-design) · [FAQ](#faq) · [Test cases](#test-cases) · [Privacy](PRIVACY.md) · [Disclaimer](#disclaimer)
+[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Private and secure](#private-and-secure) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
 
 ---
 
@@ -39,19 +41,6 @@ For people who use AI every day and often need its help with WhatsApp: who is wa
 - "Download the PDF in that message."
 
 You do not have to say "WhatsApp": the AI reads your chats and saves reply drafts on its own when a question is about messages, customers or replies. A draft appears above the WhatsApp message box and first on the extension's Overview page, and **you** press send.
-
-## Why it never sends
-
-Most WhatsApp MCP servers log in as a new linked device and include a "send message" tool. This one is different:
-
-| | WhatsApp Readonly MCP | Typical WhatsApp MCP / bot |
-|---|---|---|
-| Can send, reply, forward, delete | **No: there is no code for it** | Yes |
-| Marks messages as read | **No** | Often |
-| How it connects | The WhatsApp Web tab you already use | A new linked device or session |
-| Where data goes | Only your computer and the AI app you chose | Depends on the project |
-| Outside servers, analytics | **None** | Varies |
-| Dependencies | **0** (hand-written MCP + WebSocket) | Many |
 
 ## Compatibility
 
@@ -108,6 +97,28 @@ Ask your AI: "What's my WhatsApp status?" It shows a 6-digit code such as `123 4
 
 Step-by-step guide for students (Chinese): [`docs/安装说明.md`](docs/安装说明.md)
 
+## Private and secure
+
+Most WhatsApp MCP servers log in as a new linked device and include a "send message" tool. This one is different:
+
+| | WhatsApp Readonly MCP | Typical WhatsApp MCP / bot |
+|---|---|---|
+| Can send, reply, forward, delete | **No: there is no code for it** | Yes |
+| Marks messages as read | **No** | Often |
+| How it connects | The WhatsApp Web tab you already use | A new linked device or session |
+| Where data goes | Only your computer and the AI app you chose | Depends on the project |
+| Outside servers, analytics | **None** | Varies |
+| Dependencies | **0** (hand-written MCP + WebSocket) | Many |
+
+- **Never sends.** The code has no send, Enter key, mark-as-read or delete path. Filling a draft into the box and opening a chat only react to real clicks (`event.isTrusted`).
+- **Local only.** The server listens on `127.0.0.1` only and accepts the extension's fixed origin only. Any web page is refused.
+- **Pairing.** A 6-digit code with SPAKE2 (RFC 9382, P-256): each try can test one guess only, even for a program that records everything. The code lasts 3 minutes, with 5 tries per code and 12 per run. After pairing, both sides prove they hold a 256-bit secret with HMAC. The secret never crosses the wire.
+- **Downloads are checked.** Only types that can be checked completely are saved: photos, video, audio, text, PDF and modern Office. Programs, archives, macros, dangerous PDF actions, DDE fields and spreadsheet formulas are refused. A check that cannot finish refuses the file.
+- **No outside network.** No analytics, update checks, remote code or web fonts. The only outside request is `download_media` fetching one file from WhatsApp's own media server.
+- **You can wipe it.** The dashboard's **My data** page shows everything stored and clears it, after a confirmation.
+
+Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
 ## MCP tools
 
 | Tool | Type | What it does |
@@ -123,17 +134,6 @@ Step-by-step guide for students (Chinese): [`docs/安装说明.md`](docs/安装�
 | `list_drafts` | read | Drafts, and what you actually sent, for comparison |
 
 Every tool declares MCP annotations (`readOnlyHint`, `destructiveHint: false`, `idempotentHint`, `openWorldHint`), so the AI app can tell reading from writing.
-
-## Security design
-
-- **Never sends.** The code has no send, Enter key, mark-as-read or delete path. Filling a draft into the box and opening a chat only react to real clicks (`event.isTrusted`).
-- **Local only.** The server listens on `127.0.0.1` only and accepts the extension's fixed origin only. Any web page is refused.
-- **Pairing.** A 6-digit code with SPAKE2 (RFC 9382, P-256): each try can test one guess only, even for a program that records everything. The code lasts 3 minutes, with 5 tries per code and 12 per run. After pairing, both sides prove they hold a 256-bit secret with HMAC. The secret never crosses the wire.
-- **Downloads are checked.** Only types that can be checked completely are saved: photos, video, audio, text, PDF and modern Office. Programs, archives, macros, dangerous PDF actions, DDE fields and spreadsheet formulas are refused. A check that cannot finish refuses the file.
-- **No outside network.** No analytics, update checks, remote code or web fonts. The only outside request is `download_media` fetching one file from WhatsApp's own media server.
-- **You can wipe it.** The dashboard's **My data** page shows everything stored and clears it, after a confirmation.
-
-Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## FAQ
 
@@ -161,50 +161,6 @@ No. Reading through the extension does not open the chat or send read receipts.
 **Does it need the WhatsApp Business API?**
 No. It reads the normal WhatsApp Web you already use. No API key, no Meta developer account.
 
-## Test cases
-
-62 automated tests run on every push (see the badge). One more end-to-end test runs locally in a throwaway Chromium before each release. All tests use fake WhatsApp data, test ports and a test data folder. They never touch a real account or a real pairing.
-
-```bash
-node --test tests/*.test.mjs
-```
-
-```bash
-CHROMIUM_PATH=/path/to/chromium node --test tests/download.e2e.mjs
-```
-
-| File | What it proves |
-|---|---|
-| [`pake.test.mjs`](tests/pake.test.mjs) | Pairing (SPAKE2): both sides use the same code file; the right code pairs; a wrong code fails; bad curve points are refused; a recorded try cannot be used to test other codes offline |
-| [`rogue.test.mjs`](tests/rogue.test.mjs) | A fake local program learns nothing and can do nothing; it never gets the code; a relay on another port cannot reuse proofs; pairing is closed unless a code was just shown, with a fixed try budget |
-| [`hub.test.mjs`](tests/hub.test.mjs) | 25 AI sessions share one connection; a crashed leader is replaced without losing requests; drafts are never saved twice; wrong tokens, web origins and wrong hosts are refused; it listens on `127.0.0.1` only |
-| [`scan.test.mjs`](tests/scan.test.mjs) | Malware check: programs refused by content and by name; disguised files, hidden archives, web pages, dangerous PDF actions, Office macros, DDE and spreadsheet formulas refused; unfinished checks refuse the file; a hostile PDF cannot freeze the extension |
-| [`media.test.mjs`](tests/media.test.mjs) | The reader cannot send, open chats or use the network; every message type is read correctly in a real headless Chrome; pictures reach the AI over MCP; downloads only happen on a paired MCP request, only from WhatsApp's media server |
-| [`reader.test.mjs`](tests/reader.test.mjs) | Name lookups cannot be hijacked by look-alike groups or people named "Me"; view-once media is always refused; ambiguous names list exact matches first |
-| [`card.test.mjs`](tests/card.test.mjs) | A draft is only ever filled into the chat it was written for, even while you switch chats |
-| [`storage.test.mjs`](tests/storage.test.mjs) | Clearing drafts or the activity log is never undone by a write in flight; two AI apps saving at once keep both drafts; hostile file names are handled fast |
-| [`i18n.test.mjs`](tests/i18n.test.mjs) | Screens are in English by default, even in a Chinese browser; Chinese only when the user picks it; clearing settings goes back to English |
-| [`download.e2e.mjs`](tests/download.e2e.mjs) | End to end in a real Chromium with the real extension and server: pair, download, refuse malware, and check the My data page |
-
-## Repository layout
-
-| Path | What |
-|---|---|
-| `extension/` | Chrome extension (Manifest V3) |
-| `plugins/aiforbusiness-chat-assistant/` | Plugin for Claude Code and ChatGPT/Codex, with the local MCP server in `server/` |
-| `mcpb/` | Claude Desktop extension (`.mcpb`) build |
-| `.claude-plugin/`, `.agents/plugins/` | Plugin marketplaces for Claude Code and Codex |
-| `tests/` | Automated tests |
-| `docs/` | Install guide, architecture, store listing text |
-
-## Making a release
-
-```bash
-sh scripts/release.sh
-```
-
-It checks that every version number matches, runs the tests, builds `dist/aiforbusiness-chat-assistant.mcpb` and the release zip, tags `v<version>`, pushes the tag and publishes a GitHub Release with both files and `SHA256SUMS.txt`. Add `--dry-run` to build and check without tagging or publishing. Bump the version in all manifests first.
-
 ## Disclaimer
 
 - **Use at your own risk. We are not liable for any loss.** This software is provided "as is", without warranty of any kind (see the [MIT License](LICENSE)). AI for Business is not responsible for any loss or damage from using it, including lost data, missed or wrong messages, or any action WhatsApp takes on your account.
@@ -212,10 +168,6 @@ It checks that every version number matches, runs the tests, builds `dist/aiforb
 - **For business or commercial messaging, use an official route:** the [WhatsApp Business Platform (official API, WABA)](https://business.whatsapp.com/products/business-platform) or an authorised third-party WhatsApp API provider.
 - **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp, Meta, Anthropic or OpenAI. All trademarks and logos belong to their owners and are used only to show what this works with.
 - **You are responsible** for following WhatsApp's Terms of Service and the laws that apply to you, including privacy law for other people's messages.
-
-## Contributing
-
-Issues and pull requests are welcome. Every change must keep the never-send rule: no code that sends, marks as read, deletes or changes anything in WhatsApp, and no outside network requests. Run `node --test tests/*.test.mjs` before opening a pull request.
 
 ## License
 
@@ -234,3 +186,4 @@ Issues and pull requests are welcome. Every change must keep the never-send rule
 **免责声明：** 使用风险自负，我们不对任何损失负责。本插件仅供研究和学习用途，不作商业用途。商业用途请使用 WhatsApp 官方 API（WABA）或其他第三方 WhatsApp API 服务商。
 
 安装步骤：[`docs/安装说明.md`](docs/安装说明.md) · 技术说明：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
