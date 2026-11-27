@@ -52,7 +52,7 @@ function zipOf(entries) {
 }
 
 test("download_media end to end", { skip: !CHROMIUM && "no Chromium for testing", timeout: 240000 }, async () => {
-  const dir = mkdtempSync(join(tmpdir(), "wa-e2e-")), downloads = join(dir, "dl"), base = 56000 + (process.pid % 300) * 10;
+  const dir = mkdtempSync(join(tmpdir(), "wa-e2e-")), downloads = join(dir, "dl"), base = 30000 + (process.pid % 200) * 10 /* own band, see tests/hub.test.mjs */;
   const extDir = join(dir, "ext"), profile = join(dir, "profile"), procs = [], hits = [], hosts = new Set();
   cpSync(join(ROOT, "extension"), extDir, { recursive: true });
   for (const f of ["background.js"]) { const p = join(extDir, f), s = readFileSync(p, "utf8"); assert.ok(s.includes("47821 + i")); writeFileSync(p, s.replaceAll("47821", String(base))); }

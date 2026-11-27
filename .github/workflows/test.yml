@@ -25,4 +25,4 @@ jobs:
       - name: Unit and integration tests
         env:
           CI: "true"
-        run: node --test tests/*.test.mjs
+        run: node --test --test-timeout=180000 tests/*.test.mjs

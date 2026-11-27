@@ -13,7 +13,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const BASE = 44000 + (process.pid % 200) * 10;
+const BASE = 26000 + (process.pid % 200) * 10; // own band, see tests/hub.test.mjs
 const dir = mkdtempSync(join(tmpdir(), "wa-rogue-"));
 process.env.WA_READONLY_DATA_DIR = join(dir, "data");
 process.env.WA_READONLY_TEST_PORT_BASE = String(BASE);
@@ -50,12 +50,12 @@ const fakes = [];
 const routes = new Map(); // dialed port -> real port to pipe to
 globalThis.WebSocket = class FakeWS {
   constructor(url) {
-    this.port = Number(new URL(url).port); this.sent = []; fakes.push(this);
+    this.port = Number(new URL(url).port); this.sent = []; this.got = []; fakes.push(this);
     const real = routes.get(this.port);
     if (real) {
       this.real = new NativeWS(`ws://127.0.0.1:${real}`, { headers: { Origin: "chrome-extension://hmajmekaiaiilhneebgbnchonfkblndb" } });
       this.real.onopen = () => this.onopen?.();
-      this.real.onmessage = (e) => this.onmessage?.({ data: e.data });
+      this.real.onmessage = (e) => { try { this.got.push(JSON.parse(e.data).type); } catch (_) {} return this.onmessage?.({ data: e.data }); };
       this.real.onclose = () => this.onclose?.();
       this.real.onerror = () => {};
     }
@@ -83,6 +83,7 @@ test.after(() => { process.exitCode = process.exitCode || 0; rmSync(dir, { recur
 test("honest path: pairing with the 6-digit code, then reconnect by proof; the secret never crosses the wire", async () => {
   onMessage({ type: "wa_opened" }, WA, () => {});
   await until(() => [...bridge.conns].some((c) => c.state === "need_pair"));
+  await until(() => fakes.some((f) => f.port === BASE && f.got.includes("need_pair"))); await tick(200); // the extension has heard it too (slow machines)
   const code = (await bridge.localInfo(0)).code; // the AI is shown the code: pairing is armed now
   assert.match(code, /^\d{6}$/);
   const r = await ask({ type: "pair", code: code.match(/.{1,3}/g).join(" ") });

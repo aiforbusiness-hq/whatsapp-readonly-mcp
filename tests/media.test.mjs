@@ -135,7 +135,7 @@ test("real reader in Chrome: every kind of message", { skip: !CHROME && "Chrome 
 });
 
 test("end to end over MCP: get_media reaches the extension and comes back as an image, also from a second AI session", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "wa-mm-")), base = 52000 + (process.pid % 300) * 10, all = [];
+  const dir = mkdtempSync(join(tmpdir(), "wa-mm-")), base = 28000 + (process.pid % 200) * 10 /* own band, see tests/hub.test.mjs */, all = [];
   const start = () => {
     const p = spawn(process.execPath, [join(ROOT, "plugins/aiforbusiness-chat-assistant/server/server.js")], { env: { ...process.env, WA_READONLY_DATA_DIR: dir, WA_READONLY_TEST_PORT_BASE: String(base) }, stdio: ["pipe", "pipe", "ignore"] });
     all.push(p); let buf = "", n = 1; const w = new Map();

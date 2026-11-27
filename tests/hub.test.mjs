@@ -15,7 +15,9 @@ const SERVER = join(dirname(fileURLToPath(import.meta.url)), "../plugins/aiforbu
 const ORIGIN = "chrome-extension://hmajmekaiaiilhneebgbnchonfkblndb";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 12000) => { const t = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t > ms) throw new Error("timeout: " + fn); await sleep(50); } };
-let base = 41000 + (process.pid % 500) * 20;
+// Test ports: each file has its own band below 32768, outside the ranges Linux (32768+) and macOS (49152+)
+// use for outgoing connections. hub 20000-25999, rogue 26000-27999, media 28000-29999, e2e 30000-31999.
+let base = 20000 + (process.pid % 24) * 240;
 
 function env() {
   const dir = mkdtempSync(join(tmpdir(), "wa-hub-"));
@@ -181,6 +183,7 @@ test("hub refuses: wrong token, any Origin, wrong Host, bad nonce, extra ops; we
     // reflected / wrong proof: closed without an answer
     for (const proof of ["0".repeat(64), "x", null]) {
       const u = await raw(e.b, HUB(e.b)); assert.equal(u.status, 101);
+      u.socket.on("error", () => {}); // the server may drop the line while we still write: that is the point
       let got = ""; u.socket.on("data", (d) => { got += d; });
       u.socket.write(JSON.stringify({ type: "auth", proof: proof ?? u.headers["x-hub-proof"] }) + "\n");
       u.socket.write(JSON.stringify({ type: "call", id: 1, what: "info" }) + "\n");
@@ -188,7 +191,7 @@ test("hub refuses: wrong token, any Origin, wrong Host, bad nonce, extra ops; we
       assert.equal(got, "");
     }
     // a command before signing in is refused too
-    const u0 = await raw(e.b, HUB(e.b)); u0.socket.write(JSON.stringify({ type: "call", id: 1, what: "info" }) + "\n");
+    const u0 = await raw(e.b, HUB(e.b)); u0.socket.on("error", () => {}); u0.socket.write(JSON.stringify({ type: "call", id: 1, what: "info" }) + "\n");
     await new Promise((r) => { u0.socket.on("close", r); u0.socket.resume(); });
     // right token, forbidden op
     const { connectHub, loadToken } = await import("../plugins/aiforbusiness-chat-assistant/server/lib/hub.js");
