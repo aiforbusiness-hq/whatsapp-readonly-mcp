@@ -326,6 +326,7 @@ svg { width:14px; height:14px; flex:none; }
       mark("inserted", want);
       $("msg").textContent = tr("✓ 已填入。看一下、改一改，再自己按发送。", "✓ Filled in. Check it, edit if needed, then press send yourself.");
       want.status = "inserted";
+      collapsed = true; // 填好了就收起卡片，不挡住对话；要再看按小按钮
       show(want);
     }
   });
@@ -339,6 +340,23 @@ svg { width:14px; height:14px; flex:none; }
     mark("dismissed");
     show(null);
   });
+  // 「在 WhatsApp 打开」链接（https://web.whatsapp.com/#ai-draft=<草稿 id>）：用户点了 AI 给的链接，
+  // 背景程序打开那个对话后叫这里把草稿填进输入框。草稿 id 是随机的，别的网站猜不到。
+  // 只填入、不发送；输入框里已经有字就不覆盖。
+  async function fillFromLink(id) {
+    for (let i = 0; i < 24; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      let a = null, r = null;
+      try { a = await chrome.runtime.sendMessage({ type: "card_active_chat" }); r = await chrome.runtime.sendMessage({ type: "card_drafts" }); } catch (_) { return; }
+      const d = r?.drafts?.find((x) => x.id === id);
+      if (!d || a?.chat?.id !== d.chat_id || !composer()) continue;
+      current = null; show(d);
+      if ((composer().innerText || "").trim()) { $("msg").textContent = tr("输入框里已经有字，没有覆盖。要换成草稿请按「填入输入框」。", "The message box already has text, so it was not replaced. Press Fill in to use the draft."); return; }
+      if (fillComposer(d.text)) { mark("inserted", d); d.status = "inserted"; collapsed = true; show(d); }
+      return;
+    }
+  }
+  try { chrome.runtime.onMessage.addListener((m, sender) => { if (sender.id === chrome.runtime.id && m?.type === "ab_fill_draft" && typeof m.id === "string") fillFromLink(m.id); }); } catch (_) {}
   $("collapse").addEventListener("click", (e) => { if (e.isTrusted) { collapsed = true; place(); } });
   $("expand").addEventListener("click", (e) => { if (e.isTrusted) { collapsed = false; place(); } });
 

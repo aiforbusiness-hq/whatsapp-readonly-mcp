@@ -541,6 +541,18 @@ function removeBtn(id) {
   });
   return b;
 }
+// 草稿的「打开」：打开对话并把草稿填进输入框（不发送）
+function openDraftBtn(id) {
+  return el("button", {
+    class: "open-btn", title: tr("打开对话，草稿填进输入框（会标已读；不会发送）", "Open the chat with the draft filled in (marks it as read; nothing is sent)"),
+    onclick: async (e) => {
+      e.preventDefault();
+      if (!e.isTrusted) return;
+      const r = await ask({ type: "open_draft", id }).catch((err) => { showBanner(failText(err)); return null; });
+      if (r?.ok && EMBED) closeEmbed(); else if (r && !r.ok) showBanner(r.reason || tr("打不开", "Couldn't open"));
+    }
+  }, tr("打开并填入", "Open & fill in"));
+}
 function openBtn(chatId) {
   return el("button", {
     class: "open-btn", title: tr("打开对话（会标已读，对方会看到蓝勾）", "Open chat (marks it as read; they will see blue ticks)"),
@@ -590,7 +602,7 @@ function renderNewDrafts() {
         el("span", { class: "tag new", text: tr("新", "New") }),
         el("time", { text: ago(d.created_at) }),
         el("span", { class: "by", text: tr("由 ", "by ") + clientName(d.source) + tr(" 写", "") }),
-        el("span", { class: "btns" }, removeBtn(d.id), openBtn(d.chat_id)))));
+        el("span", { class: "btns" }, removeBtn(d.id), openDraftBtn(d.id)))));
   }));
   $("seeDrafts").textContent = fresh.length > 5 ? tr(`看全部（还有 ${fresh.length - 5} 条）`, `See all (${fresh.length - 5} more)`) : tr("看全部草稿", "See all drafts");
 }
@@ -963,7 +975,7 @@ function renderDrafts() {
         : el("div", { class: "note", text: o.hint }));
     const foot = el("div", { class: "chat-foot" },
       el("span", { text: a.sim != null ? tr(`相似度 ${pct(a.sim)} · 草稿后 ${dur(a.minutes)} 发出第一条`, `Similarity ${pct(a.sim)} · first message ${dur(a.minutes)} after the draft`) : tr("还没有可比对的信息", "Nothing to compare yet") }),
-      el("span", { class: "btns" }, removeBtn(d.id), openBtn(d.chat_id)));
+      el("span", { class: "btns" }, removeBtn(d.id), openDraftBtn(d.id)));
     list.append(el("li", { class: isNewDraft({ d, a }) ? "is-new" : null }, el("details", {}, summary, chat, foot)));
   }
   const more = $("moreDrafts");

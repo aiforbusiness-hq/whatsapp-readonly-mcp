@@ -66,6 +66,12 @@ function button(label, icon, cls, onClick) {
   b.addEventListener("click", (e) => { if (e.isTrusted) onClick(e, b); });
   return b;
 }
+// 草稿：打开对话，草稿直接填进输入框（不发送）
+async function openDraft(id, fb) {
+  fb.textContent = tr("打开中…", "Opening…");
+  const r = await send({ type: "open_draft", id });
+  fb.textContent = r?.ok ? tr("已打开并填入", "Opened and filled in") : (r?.reason || tr("打不开", "Couldn't open"));
+}
 async function openChat(chatId, fb) {
   fb.textContent = tr("打开中…", "Opening…");
   const r = await send({ type: "open_chat", chat_id: chatId });
@@ -176,7 +182,7 @@ function renderDrafts(kw) {
     const fb = el("span", "feedback");
     const act = el("div", "actions");
     act.append(
-      button(tr("打开对话", "Open chat"), "open", "primary", () => openChat(d.chat_id, fb)),
+      button(tr("打开并填入", "Open & fill in"), "open", "primary", () => openDraft(d.id, fb)),
       button(tr("复制", "Copy"), "copy", "", async () => {
         try { await navigator.clipboard.writeText(d.text); fb.textContent = tr("已复制", "Copied"); send({ type: "card_mark", id: d.id, status: "copied" }); }
         catch (_) { fb.textContent = tr("复制失败", "Copy failed"); }

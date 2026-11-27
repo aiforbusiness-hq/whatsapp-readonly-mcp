@@ -156,6 +156,18 @@ test("the card names the chat, and fills only when the open chat matches", async
   assert.ok(w.log.some((e) => e.event === "paste_into_composer" && e.composer_of_chat === ALICE));
 });
 
+test("after Fill in, the card collapses so it does not cover the chat", async () => {
+  const w = makeWorld();
+  w.page.header = "Alice (dummy)"; w.page.chatId = ALICE;
+  w.tick(); await w.flushMicro();
+  w.held.shift().res({ ok: true, chat: { id: ALICE }, drafts: [aliceDraft] }); await w.flushMicro();
+  assert.equal(w.get(".card").hidden, false, "card open before filling");
+  w.get("fill")._h.click({ isTrusted: true }); for (let i = 0; i < 5; i++) await w.flushMicro();
+  assert.ok(w.log.some((e) => e.event === "paste_into_composer" && e.composer_of_chat === ALICE));
+  assert.equal(w.get(".card").hidden, true, "card collapsed after filling");
+  assert.equal(w.get("expand").hidden, false, "small button to open it again");
+});
+
 test("'online' / 'typing…' changing in the header does not hide the card or block filling", async () => {
   const w = makeWorld();
   w.page.header = "Alice (dummy)"; w.page.chatId = ALICE;

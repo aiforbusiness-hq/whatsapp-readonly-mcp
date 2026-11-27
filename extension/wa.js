@@ -43,8 +43,8 @@ export async function runInWa(func, args, ms, tabId) {
 }
 
 // 只给「用户亲手点打开对话」用。打开后把 WhatsApp 分页切到前面。
-export async function openChat(chatId) {
-  const tab = await findWhatsAppTab();
+export async function openChat(chatId, tabId) {
+  const tab = tabId != null ? await chrome.tabs.get(tabId).catch(() => null) : await findWhatsAppTab();
   if (!tab) return { ok: false, reason: tr("WhatsApp Web 没开", "WhatsApp Web is not open") };
   let r;
   try {

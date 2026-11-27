@@ -22,6 +22,7 @@ The tools only read, and `save_draft` only saves a draft. Nothing is ever sent, 
 4. **Write like the user.** Use the other person's language (English, 中文, Bahasa Melayu or mixed), keep their tone, and keep it short. Look at the user's own earlier messages (`from_me: true`) for how they write.
 5. **Report.**
    - Say which chats got a draft and quote each draft.
+   - Under each draft, give its `open_link` (from `save_draft`) as a clickable link: `[Open in WhatsApp](open_link)`. One click opens that chat with the draft filled in.
    - Say that nothing was sent: the user opens the chat in WhatsApp, a preview appears above the message box, and they press send themselves.
    - New drafts also show at the top of the extension's Overview page.
 

@@ -146,6 +146,33 @@ async function skipIgnored(op, params, r) {
     note: [r.note, tr(`另外 ${n} 个对话用户标了「不用回」，没列出来（对方再传新信息就会回来）`, `${n} more chats were marked \"No reply needed\" by the user and are not listed (they come back when the other person sends a new message)`)].filter(Boolean).join("；") };
 }
 
+// 「在 WhatsApp 打开」链接：用已经开着的 WhatsApp 分页（新开的那个关掉），打开草稿的对话，再叫页面填入草稿
+async function openDraftLink(id, linkTab) {
+  const d = (await listDrafts({ limit: 2000 })).find((x) => x.id === id);
+  if (!d) return { ok: false };
+  const others = (await chrome.tabs.query({ url: "https://web.whatsapp.com/*" }))
+    .filter((t) => t.id !== linkTab.id && !t.incognito)
+    .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  const target = others[0] || linkTab;
+  const close = target.id !== linkTab.id;
+  if (close) setTimeout(() => chrome.tabs.remove(linkTab.id).catch(() => {}), 300);
+  openDraftIn(target, d).catch(() => {});
+  return { ok: true, close };
+}
+// 打开草稿的对话并填入（链接、弹窗、仪表板的「打开」都用这个）。只填入，不发送
+async function openDraftIn(target, d) {
+  if (target.discarded || target.status === "unloaded") await chrome.tabs.reload(target.id).catch(() => {});
+  // 等 WhatsApp Web 载入好（新分页或刚叫醒的分页要一点时间），最多 60 秒
+  for (let i = 0; i < 60; i++) {
+    const s = await runRead("status", {}, target.id).catch(() => null);
+    if (s?.ok && s.logged_in_guess !== false) break;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  const o = await openChat(d.chat_id, target.id);
+  if (o?.ok) chrome.tabs.sendMessage(target.id, { type: "ab_fill_draft", id: d.id }).catch(() => {});
+  return o;
+}
+
 // ---------- 草稿 ----------
 async function draftOp(op, p) {
   if (op === "save_draft") {
@@ -161,7 +188,7 @@ async function draftOp(op, p) {
     if (!a.ok) return a;
     return {
       ok: true, draft_id: a.draft.id, chat: r.chat, created_at: a.draft.created_at,
-      note: tr("已存成草稿，没有发送。用户在 WhatsApp 打开这个对话时，输入框上方会出现预览，由用户决定要不要填入、自己按发送。", "Saved as a draft, not sent. When the user opens this chat in WhatsApp, a preview appears above the message box; the user decides whether to fill it in and presses send themselves.")
+      note: tr("已存成草稿，没有发送。用户在 WhatsApp 打开这个对话时，输入框上方会出现预览，由用户决定要不要填入、自己按发送。", "Saved as a draft, not sent. Give the user open_link as a clickable link: it opens this chat in WhatsApp Web with the draft filled in, and the user presses send themselves.")
     };
   }
   if (op === "list_drafts") {
@@ -287,21 +314,36 @@ async function readFast(op, p) {
       count: Math.min(rows.length, limit), chats: rows.slice(0, limit).map(stripRow) };
   }
   if (op === "list_awaiting_reply") {
+    // 给 AI 的顺序：最新在等的排最前（今天的客户比几个月前的广告重要）；
+    // 「不用回」先拿掉再截取数量，不然前面几个都被标了不用回时会回传空的
     const limit = Math.max(1, Math.min(Number(p.limit) || 50, 200));
+    const now = Date.now();
     let list = meta.waiting;
-    if (limit > list.length && meta.waiting_total > list.length) {
-      const now = Date.now();
+    if (meta.waiting_total > list.length) {
       const days = Number((await chrome.storage.local.get("auto_ignore_days")).auto_ignore_days) || 0;
       const cut = days > 0 ? now - days * 86400000 : -Infinity;
       list = (await allChatRows()).filter((r) => r.awaiting_my_reply === true && r.since && !r.archived && !r.is_official && Date.parse(r.since) >= cut)
         .map((r) => ({ id: r.id, name: r.name, is_group: r.is_group, since: r.since, last: r.last, unread: r.unread,
           their_last_message: r.their_last_message, their_last_sender: r.their_last_sender,
-          waiting_hours: Math.round(((now - Date.parse(r.since)) / 3600000) * 10) / 10 }))
-        .sort((a, b) => b.waiting_hours - a.waiting_hours);
+          waiting_hours: Math.round(((now - Date.parse(r.since)) / 3600000) * 10) / 10 }));
     }
-    const out = list.filter((w) => p.include_groups !== false || !w.is_group).slice(0, limit);
-    return { ok: true, count: out.length, unknown_chats: meta.unknown_chats,
-      note: meta.unknown_chats ? tr(`${meta.unknown_chats} 个对话电脑里没有存信息，还在后台检查`, `${meta.unknown_chats} chats have no messages stored on this computer yet; still checking in the background`) : undefined,
+    list = [...list].sort((a, b) => Date.parse(b.since) - Date.parse(a.since));
+    if (p.include_groups === false) list = list.filter((w) => !w.is_group);
+    let ignored = 0;
+    if (!p.include_ignored) {
+      const ig = (await chrome.storage.local.get("ignored_waiting")).ignored_waiting || {};
+      const keep = list.filter((c) => !(ig[c.id] && ig[c.id] === (c.last || c.since)));
+      ignored = list.length - keep.length;
+      list = keep;
+    }
+    const out = list.slice(0, limit);
+    const notes = [
+      meta.unknown_chats ? tr(`${meta.unknown_chats} 个对话电脑里没有存信息，还在后台检查`, `${meta.unknown_chats} chats have no messages stored on this computer yet; still checking in the background`) : "",
+      ignored ? tr(`另外 ${ignored} 个对话用户标了「不用回」，没列出来（对方再传新信息就会回来）`, `${ignored} more chats were marked "No reply needed" by the user and are not listed (they come back when the other person sends a new message)`) : ""
+    ].filter(Boolean);
+    return { ok: true, count: out.length, total_waiting: list.length, order: "newest_first", unknown_chats: meta.unknown_chats,
+      ...(ignored ? { ignored_by_user: ignored } : {}),
+      note: notes.length ? notes.join("；") : undefined,
       chats: out };
   }
   return runRead(op, p);
@@ -612,6 +654,22 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   // 「仪表板」= 在 WhatsApp Web 页面里打开（不另开插件页面）
   if (msg?.type === "open_dashboard" && (fromPopup(sender) || fromDash(sender))) {
     openDashboardInWhatsApp().then(reply, () => reply({ ok: false }));
+    return true;
+  }
+  // 「在 WhatsApp 打开」链接（link.js）：草稿 id 对得上才动作；只打开对话、填入，不发送
+  if (msg?.type === "open_draft_link" && fromWaPage(sender)) {
+    openDraftLink(String(msg.id || ""), sender.tab).then(reply, () => reply({ ok: false }));
+    return true;
+  }
+  // 弹窗 / 仪表板的草稿「打开」：打开对话并填入草稿
+  if (msg?.type === "open_draft" && (fromPopup(sender) || fromDash(sender) || fromWaPage(sender))) {
+    (async () => {
+      const d = (await listDrafts({ limit: 2000 })).find((x) => x.id === String(msg.id || ""));
+      if (!d) return { ok: false, reason: tr("找不到这份草稿", "Can't find this draft") };
+      const tab = await findWhatsAppTab(true);
+      if (!tab) return { ok: false, reason: tr("WhatsApp Web 没开", "WhatsApp Web is not open") };
+      return openDraftIn(tab, d);
+    })().then(reply, (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
   if (msg?.type === "open_chat") {

@@ -18,6 +18,11 @@ function withAttachments(r) {
   return out;
 }
 
+// "Open in WhatsApp" link for a saved draft: the Chrome extension opens that chat in the user's own
+// WhatsApp Web tab and fills the draft into the message box. It never sends.
+const LINK = "https://web.whatsapp.com/#ai-draft=";
+const withLink = (d) => (d && typeof d.id === "string" && /^[0-9a-f-]{36}$/i.test(d.id) ? { ...d, open_link: LINK + d.id } : d);
+
 export const TOOLS = [
   {
     name: "get_status",
@@ -128,7 +133,7 @@ export const TOOLS = [
   {
     name: "list_awaiting_reply",
     title: "Who is waiting for my reply",
-    description: RO + "Start here when the user asks what needs attention, who to reply to, what they missed, or about follow-ups, new leads, customers or orders. List chats where the other person spoke last and the user has not replied (excludes official accounts and archived chats), with their last message and how many hours they have waited. Chats with no stored messages cannot be judged and are reported as a count (unknown_chats). Chats the user marked \"No reply needed\" are left out by default (reported as ignored_by_user)." + UNTRUSTED,
+    description: RO + "Start here when the user asks what needs attention, who to reply to, what they missed, or about follow-ups, new leads, customers or orders. List chats where the other person spoke last and the user has not replied (excludes official accounts and archived chats), newest first, with their last message and how many hours they have waited; total_waiting is the full count. Chats with no stored messages cannot be judged and are reported as a count (unknown_chats). Chats the user marked \"No reply needed\" are left out by default (reported as ignored_by_user)." + UNTRUSTED,
     inputSchema: {
       type: "object",
       properties: {
@@ -145,7 +150,7 @@ export const TOOLS = [
     name: "save_draft",
     title: "Save a reply draft (not sent)",
     readOnly: false,
-    description: "[Never sends] Use whenever you have written a reply the user would send on WhatsApp; saving is safe and nothing is sent, so do not ask before saving. Save your drafted reply to the draft list in the user's Chrome extension. When the user opens that chat in WhatsApp, a preview card appears above the message box; the user decides whether to fill it in and presses send themselves. Only writes the draft list; never touches WhatsApp. Read the chat with get_messages before drafting. A new draft for the same chat replaces the older unused one.",
+    description: "[Never sends] Use whenever you have written a reply the user would send on WhatsApp; saving is safe and nothing is sent, so do not ask before saving. Save your drafted reply to the draft list in the user's Chrome extension. Returns open_link: always show it to the user as a clickable Markdown link next to the draft, e.g. [Open in WhatsApp](open_link). Clicking it opens that chat in their WhatsApp Web with the draft filled in; they press send themselves. When the user opens that chat in WhatsApp, a preview card appears above the message box; the user decides whether to fill it in and presses send themselves. Only writes the draft list; never touches WhatsApp. Read the chat with get_messages before drafting. A new draft for the same chat replaces the older unused one.",
     inputSchema: {
       type: "object",
       properties: {
@@ -156,10 +161,13 @@ export const TOOLS = [
       required: ["chat", "text"],
       additionalProperties: false
     },
-    run: (bridge, a) => bridge.request("save_draft", {
-      chat: String(a.chat || ""), text: String(a.text || ""), note: a.note ? String(a.note) : undefined,
-      source: bridge.clientName || "ai"
-    })
+    run: async (bridge, a) => {
+      const r = await bridge.request("save_draft", {
+        chat: String(a.chat || ""), text: String(a.text || ""), note: a.note ? String(a.note) : undefined,
+        source: bridge.clientName || "ai"
+      });
+      return r?.ok && r.draft_id ? { ...r, open_link: LINK + r.draft_id } : r;
+    }
   },
   {
     name: "list_drafts",
@@ -176,9 +184,13 @@ export const TOOLS = [
       },
       additionalProperties: false
     },
-    run: (bridge, a) => bridge.request("list_drafts", {
+    run: async (bridge, a) => {
+      const r = await bridge.request("list_drafts", {
       chat: a.chat ? String(a.chat) : undefined, since: a.since ? String(a.since) : undefined,
       status: a.status, include_actual: a.include_actual !== false, limit: Math.min(Number(a.limit) || 200, 2000)
-    }, { waitMs: 12000 })
+      }, { waitMs: 12000 });
+      // unused drafts get an "Open in WhatsApp" link too
+      return r?.ok && Array.isArray(r.drafts) ? { ...r, drafts: r.drafts.map((d) => (d.status === "pending" ? withLink(d) : d)) } : r;
+    }
   }
 ];
