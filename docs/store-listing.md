@@ -66,4 +66,5 @@ No. All code is inside the package. The Content Security Policy allows scripts o
 - After the first upload, add the store's extension ID to the plugin (`plugins/aiforbusiness-chat-assistant/server/lib/bridge.js`), so the local plugin accepts the store version as well as the developer-mode one. Release a new plugin version before the store version goes public.
 - Screenshots (1280x800) and the small promo tile (440x280): run `node scripts/store-shots.mjs`, files land in `dist/store/`. They use only the made-up chats in `bench/fixture.mjs`.
 - Do not upload `5-how-it-works.png`: it shows the WhatsApp, Claude and ChatGPT logos, which reviewers can treat as trademark use.
-- Privacy policy URL: `https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/blob/main/PRIVACY.md` (the repository is public).
+- Privacy policy URL: `https://raw.githubusercontent.com/aiforbusiness-hq/whatsapp-readonly-mcp/main/PRIVACY.md`. The store rejected the github.com/blob link as "not reachable" (GitHub can refuse automated checks).
+- Store item ID: `cmpndcpodgfcdlabhcopofojdneafpgg`. Submitted for review 27 Nov 2026 (v0.12.5 package), set to publish automatically after review.
