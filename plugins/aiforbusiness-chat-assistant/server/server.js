@@ -5,7 +5,7 @@
 import { Bridge } from "./lib/bridge.js";
 import { TOOLS } from "./lib/tools.js";
 
-const SERVER_INFO = { name: "aiforbusiness-chat-assistant", version: "0.12.5" };
+const SERVER_INFO = { name: "aiforbusiness-chat-assistant", version: "0.12.6" };
 const SUPPORTED = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const INSTRUCTIONS =
   "The user's WhatsApp: use these tools for ANY request that mentions WhatsApp, WA, chats, messages or replies. They read the user's own WhatsApp Web that is open in their Chrome. Read-only: they cannot send, reply, forward, delete or mark as read, and there are no tools for that. " +

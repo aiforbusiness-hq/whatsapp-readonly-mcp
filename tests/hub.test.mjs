@@ -180,6 +180,10 @@ test("hub refuses: wrong token, any Origin, wrong Host, bad nonce, extra ops; we
       const ws = new WebSocket(`ws://127.0.0.1:${e.b}`, { headers: { Origin } });
       assert.equal(await new Promise((r) => { ws.onopen = () => r("open"); ws.onerror = () => r("refused"); }), "refused");
     }
+    // the Chrome Web Store build of the extension is accepted as well
+    const store = new WebSocket(`ws://127.0.0.1:${e.b}`, { headers: { Origin: "chrome-extension://cmpndcpodgfcdlabhcopofojdneafpgg" } });
+    assert.equal(await new Promise((r) => { store.onopen = () => r("open"); store.onerror = () => r("refused"); }), "open");
+    store.close();
     // reflected / wrong proof: closed without an answer
     for (const proof of ["0".repeat(64), "x", null]) {
       const u = await raw(e.b, HUB(e.b)); assert.equal(u.status, 101);

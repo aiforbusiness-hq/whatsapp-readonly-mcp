@@ -29,7 +29,7 @@ Needs the "AI for Business Chat Assistant" plugin in Claude Desktop, Claude Code
 
 ## Why this exists (for reviewers)
 
-A convenience for people who use AI a lot and often need help with WhatsApp: who is waiting for a reply, what a group said, a first draft of an answer. It is read-only and never sends a message to anyone; replies are saved as drafts and the user presses send. There is no send, bulk, broadcast, forward or auto-reply feature, so it cannot be used for spam. It reads only the user's own WhatsApp Web tab (no new linked device, no unofficial account) and works only on the computer where the user's Claude or ChatGPT desktop app is open.
+A convenience for people who use AI a lot and often need help with WhatsApp: who is waiting for a reply, what a group said, a first draft of an answer. It never sends a message to anyone; replies are saved as drafts and the user presses send. There is no send, bulk, broadcast, forward or auto-reply feature, so it cannot be used for spam. It reads only the user's own WhatsApp Web tab (no new linked device, no unofficial account) and works only on the computer where the user's Claude or ChatGPT desktop app is open.
 
 ## Disclaimer (paste where the store allows)
 
@@ -60,8 +60,10 @@ No. All code is inside the package. The Content Security Policy allows scripts o
 - Tick all three certifications: no sale to third parties; no use unrelated to the single purpose; no use for credit or lending.
 - Privacy policy URL: `https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/blob/main/PRIVACY.md`
 
-## Before submitting
+## Package and images
 
-- The GitHub repository `aiforbusiness-hq/whatsapp-readonly-mcp` must be public (it is private for now).
-- LICENSE: MIT (added).
-- Screenshots must use a test number with made-up chats. Show no real names or messages.
+- Upload package: run `scripts/build-store.sh`, then upload `dist/chrome-web-store-v<version>.zip`. It has no `key` field, because the store refuses it and gives the extension its own ID.
+- After the first upload, add the store's extension ID to the plugin (`plugins/aiforbusiness-chat-assistant/server/lib/bridge.js`), so the local plugin accepts the store version as well as the developer-mode one. Release a new plugin version before the store version goes public.
+- Screenshots (1280x800) and the small promo tile (440x280): run `node scripts/store-shots.mjs`, files land in `dist/store/`. They use only the made-up chats in `bench/fixture.mjs`.
+- Do not upload `5-how-it-works.png`: it shows the WhatsApp, Claude and ChatGPT logos, which reviewers can treat as trademark use.
+- Privacy policy URL: `https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/blob/main/PRIVACY.md` (the repository is public).

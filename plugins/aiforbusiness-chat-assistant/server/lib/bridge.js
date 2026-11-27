@@ -22,8 +22,11 @@ import { join } from "node:path";
 import { listenOn } from "./ws.js";
 import { loadToken, acceptHub, connectHub } from "./hub.js";
 
+// Developer-mode build (fixed by the manifest "key") and the Chrome Web Store build (ID given by the store).
 export const EXTENSION_ID = "hmajmekaiaiilhneebgbnchonfkblndb";
-export const ALLOWED_ORIGIN = `chrome-extension://${EXTENSION_ID}`;
+export const STORE_EXTENSION_ID = "cmpndcpodgfcdlabhcopofojdneafpgg";
+export const ALLOWED_ORIGINS = [EXTENSION_ID, STORE_EXTENSION_ID].map((id) => `chrome-extension://${id}`);
+export const ALLOWED_ORIGIN = ALLOWED_ORIGINS[0];
 // The base port can be changed for tests only; the extension always looks at 47821-47830.
 const BASE = /^\d{4,5}$/.test(process.env.WA_READONLY_TEST_PORT_BASE || "") ? Number(process.env.WA_READONLY_TEST_PORT_BASE) : 47821;
 export const PORTS = Array.from({ length: 10 }, (_, i) => BASE + i);
@@ -159,7 +162,7 @@ export class Bridge {
       checkUpgrade: (req, p) => {
         const origin = req.headers.origin;
         const host = req.headers.host;
-        const ok = origin === ALLOWED_ORIGIN && host === `${HOST}:${p}`;
+        const ok = ALLOWED_ORIGINS.includes(origin) && host === `${HOST}:${p}`;
         if (!ok) log("Rejected connection: wrong origin", JSON.stringify(String(origin || "(none)").slice(0, 80)));
         return ok;
       },
@@ -172,7 +175,7 @@ export class Bridge {
     this.registerPort();
     if (port !== PORTS[0]) this.singleTimer = setInterval(() => this.checkSingle(), SINGLE_CHECK_MS).unref();
     if (!this.peerTimer) { this.peerTimer = setInterval(() => this.pushPeers(), 5000); this.peerTimer.unref(); }
-    log(`Local server started: ws://${HOST}:${port} (only accepts extension ${EXTENSION_ID})`);
+    log(`Local server started: ws://${HOST}:${port} (only accepts extensions ${EXTENSION_ID} and ${STORE_EXTENSION_ID})`);
   }
 
   // Leader not on the first port: is there another leader on a lower port? Then step down and join it.

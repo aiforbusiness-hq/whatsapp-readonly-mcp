@@ -14,7 +14,7 @@ Claude / ChatGPT ──stdio(MCP)──▶ plugins/aiforbusiness-chat-assistant/
 
 Each AI conversation starts its own copy of server.js, with no limit on how many. The first copy takes a port and connects to the extension (the main copy). The others go through it (secondary copies). If the main copy closes, a secondary copy takes over, trying ports from the first one up (`lib/hub.js`). There is only ever one main copy at a time. If the main copy is slow to answer, a new copy waits and does not start a second main. If two main copies ever appear, the one on the higher port steps down and joins the other.
 
-- `extension/` Chrome extension (MV3). Fixed ID `hmajmekaiaiilhneebgbnchonfkblndb` (the `key` in the manifest)
+- `extension/` Chrome extension (MV3). Fixed ID `hmajmekaiaiilhneebgbnchonfkblndb` when loaded unpacked (the `key` in the manifest); the Chrome Web Store build has ID `cmpndcpodgfcdlabhcopofojdneafpgg`. The plugin accepts only these two
   - `indexer.js` live index (MAIN world, always running): the work depends only on "chats that changed", not on the total number of chats
     - One summary per chat, recomputed only when it changes (uses WhatsApp's own change events; a signature check once a minute is the safety net)
     - Totals, unread counts and messages per day / per hour are running totals: when a chat changes, the old values are subtracted and the new ones added. The waiting-for-reply list stays sorted by waiting time (binary-search insert)
