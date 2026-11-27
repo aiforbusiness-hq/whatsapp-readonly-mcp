@@ -2,13 +2,45 @@
 
 <h1 align="center">WhatsApp Readonly MCP</h1>
 
-**The private, secure WhatsApp MCP: your AI talks straight to your own WhatsApp Web. No relay, no servers in between, never sends.**
+<p align="center"><b>🔒 Secure&nbsp;&nbsp;·&nbsp;&nbsp;🛡️ Private&nbsp;&nbsp;·&nbsp;&nbsp;✋ Never sends by itself</b></p>
+
+**The secure, private WhatsApp MCP: your AI talks straight to your own WhatsApp Web. No relay, no servers in between, never sends a message by itself.**
+
+## Install: copy this prompt into your AI
+
+Paste it into **Claude Code**, **Codex** or **ChatGPT (Work mode)**. They can run the install for you. Only using Claude Desktop? Download `aiforbusiness-chat-assistant.mcpb` from [Releases](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/releases/latest), double-click it, then do steps 4 and 5 below yourself.
+
+```text
+Install "AI for Business Chat Assistant" (https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp) on this computer.
+Do one step at a time, tell me the result, and stop and ask me if anything fails or needs my decision.
+Never send, forward, delete or mark as read any WhatsApp message. Do not change anything not listed here.
+
+1. Run "node -v". It must be version 18 or newer. If Node.js is missing or older, tell me to install the LTS version from https://nodejs.org, then stop.
+2. In my Downloads folder, make a folder "AIforBusiness-Chat-Assistant-download". Download
+   https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/releases/latest/download/SHA256SUMS.txt
+   and, from the same releases/latest/download/ address, both files named inside it (the .zip and aiforbusiness-chat-assistant.mcpb).
+   Check both against SHA256SUMS.txt (Mac/Linux: shasum -a 256 -c SHA256SUMS.txt; Windows: certutil -hashfile <file> SHA256).
+   If a checksum does not match, delete the files and stop. Then unzip the .zip there.
+3. Connect the AI app you are running in:
+   - Claude Code: claude plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
+                  then: claude plugin install aiforbusiness-chat-assistant@aiforbusiness
+   - Codex or ChatGPT: codex plugin marketplace add aiforbusiness-hq/whatsapp-readonly-mcp
+                       then: codex plugin add aiforbusiness-chat-assistant@aiforbusiness
+   - If I also use Claude Desktop: open the downloaded aiforbusiness-chat-assistant.mcpb and tell me to press Install.
+4. Chrome extension: open chrome://extensions in Google Chrome for me, then tell me to turn on "Developer mode",
+   click "Load unpacked" and choose the "extension" folder inside the unzipped AIforBusiness-Chat-Assistant folder.
+   Show me the full path of that folder. Wait until I say it is done.
+5. Tell me to fully quit and reopen this AI app, open https://web.whatsapp.com in Chrome and log in,
+   then ask "What's my WhatsApp status?". It will show a 6-digit pairing code to type into the extension (valid 3 minutes).
+```
 
 Claude, ChatGPT or Codex reads the WhatsApp Web tab you already have open, finds who is waiting for your reply, summarises groups and saves reply drafts. **Private:** everything runs on your computer, and your chats never pass through us. **Secure:** the plugin talks to the Chrome extension over `127.0.0.1` only, after a 6-digit pairing. There is no relay and no server of ours in between, and no new linked device on your WhatsApp account.
 
 ![How it works: your AI app, the local plugin and the Chrome extension with WhatsApp Web, all on your computer, connected over 127.0.0.1. No relay or outside server.](docs/images/architecture.png)
 
 [![tests](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml)
+![secure: no send tool](https://img.shields.io/badge/secure-no%20send%20tool-brightgreen)
+![private: no relay](https://img.shields.io/badge/private-no%20relay%2C%20no%20server-brightgreen)
 ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![runs locally](https://img.shields.io/badge/data-stays%20on%20your%20computer-green)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-lightgrey)
@@ -19,7 +51,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Private and secure](#private-and-secure) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
+[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install-copy-this-prompt-into-your-ai) · [Tools](#mcp-tools) · [Secure & private](#-secure--private-by-design) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
 
 ---
 
@@ -31,6 +63,28 @@ For people who use AI every day and often need its help with WhatsApp: who is wa
 - **Not for spam or bulk messaging.** There is no send, broadcast, forward or auto-reply feature, and there never will be.
 - **Doesn't get around WhatsApp.** It reads the WhatsApp Web tab you already use, logged in as you. No new linked device, no unofficial account, no scraping of other people's chats.
 - **Only on your own computer.** It works only on the computer where your Claude or ChatGPT desktop app is open, with WhatsApp Web open in Chrome. Nothing runs in the cloud.
+
+## 🔒 Secure & private by design
+
+Most WhatsApp MCP servers log in as a new linked device and include a "send message" tool. This one is different:
+
+| | WhatsApp Readonly MCP | Typical WhatsApp MCP / bot |
+|---|---|---|
+| Can send, reply, forward, delete | **No: there is no code for it** | Yes |
+| Marks messages as read | **No** | Often |
+| How it connects | The WhatsApp Web tab you already use | A new linked device or session |
+| Where data goes | Only your computer and the AI app you chose | Depends on the project |
+| Outside servers, analytics | **None** | Varies |
+| Dependencies | **0** (hand-written MCP + WebSocket) | Many |
+
+- **Never sends.** The code has no send, Enter key, mark-as-read or delete path. Filling a draft into the box and opening a chat only react to real clicks (`event.isTrusted`).
+- **Local only.** The server listens on `127.0.0.1` only and accepts the extension's fixed origin only. Any web page is refused.
+- **Pairing.** A 6-digit code with SPAKE2 (RFC 9382, P-256): each try can test one guess only, even for a program that records everything. The code lasts 3 minutes, with 5 tries per code and 12 per run. After pairing, both sides prove they hold a 256-bit secret with HMAC. The secret never crosses the wire.
+- **Downloads are checked.** Only types that can be checked completely are saved: photos, video, audio, text, PDF and modern Office. Programs, archives, macros, dangerous PDF actions, DDE fields and spreadsheet formulas are refused. A check that cannot finish refuses the file.
+- **No outside network.** No analytics, update checks, remote code or web fonts. The only outside request is `download_media` fetching one file from WhatsApp's own media server.
+- **You can wipe it.** The dashboard's **My data** page shows everything stored and clears it, after a confirmation.
+
+Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## What you can ask
 
@@ -96,28 +150,6 @@ codex plugin add aiforbusiness-chat-assistant@aiforbusiness
 Ask your AI: "What's my WhatsApp status?" It shows a 6-digit code such as `123 456`. Click the extension icon in Chrome and type the code within 3 minutes. You only do this once.
 
 Step-by-step guide for students (Chinese): [`docs/安装说明.md`](docs/安装说明.md)
-
-## Private and secure
-
-Most WhatsApp MCP servers log in as a new linked device and include a "send message" tool. This one is different:
-
-| | WhatsApp Readonly MCP | Typical WhatsApp MCP / bot |
-|---|---|---|
-| Can send, reply, forward, delete | **No: there is no code for it** | Yes |
-| Marks messages as read | **No** | Often |
-| How it connects | The WhatsApp Web tab you already use | A new linked device or session |
-| Where data goes | Only your computer and the AI app you chose | Depends on the project |
-| Outside servers, analytics | **None** | Varies |
-| Dependencies | **0** (hand-written MCP + WebSocket) | Many |
-
-- **Never sends.** The code has no send, Enter key, mark-as-read or delete path. Filling a draft into the box and opening a chat only react to real clicks (`event.isTrusted`).
-- **Local only.** The server listens on `127.0.0.1` only and accepts the extension's fixed origin only. Any web page is refused.
-- **Pairing.** A 6-digit code with SPAKE2 (RFC 9382, P-256): each try can test one guess only, even for a program that records everything. The code lasts 3 minutes, with 5 tries per code and 12 per run. After pairing, both sides prove they hold a 256-bit secret with HMAC. The secret never crosses the wire.
-- **Downloads are checked.** Only types that can be checked completely are saved: photos, video, audio, text, PDF and modern Office. Programs, archives, macros, dangerous PDF actions, DDE fields and spreadsheet formulas are refused. A check that cannot finish refuses the file.
-- **No outside network.** No analytics, update checks, remote code or web fonts. The only outside request is `download_media` fetching one file from WhatsApp's own media server.
-- **You can wipe it.** The dashboard's **My data** page shows everything stored and clears it, after a confirmation.
-
-Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## MCP tools
 
