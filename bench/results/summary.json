@@ -1,0 +1,77 @@
+{
+  "generated": "2026-11-27T08:37:28.533Z",
+  "runs": 36,
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "tasks": {
+    "waiting": {
+      "plugin": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 8,
+        "median_tokens": 17662,
+        "median_turns": 2,
+        "median_cost_usd": 0.0253
+      },
+      "browser": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 20.4,
+        "median_tokens": 45851,
+        "median_turns": 4,
+        "median_cost_usd": 0.0495
+      }
+    },
+    "group-summary": {
+      "plugin": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 8.7,
+        "median_tokens": 17946,
+        "median_turns": 2,
+        "median_cost_usd": 0.0291
+      },
+      "browser": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 20,
+        "median_tokens": 57660,
+        "median_turns": 6,
+        "median_cost_usd": 0.0458
+      }
+    },
+    "find-invoice": {
+      "plugin": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 10.3,
+        "median_tokens": 17399,
+        "median_turns": 2,
+        "median_cost_usd": 0.0255
+      },
+      "browser": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 24.1,
+        "median_tokens": 76976,
+        "median_turns": 7,
+        "median_cost_usd": 0.054
+      }
+    }
+  },
+  "totals": {
+    "plugin": {
+      "seconds": 27,
+      "tokens": 53007,
+      "correct": 18,
+      "runs": 18
+    },
+    "browser": {
+      "seconds": 64.5,
+      "tokens": 180487,
+      "correct": 18,
+      "runs": 18
+    }
+  }
+}

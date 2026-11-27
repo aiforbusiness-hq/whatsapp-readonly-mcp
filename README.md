@@ -8,6 +8,12 @@
 
 ![How it works: your AI app, the local plugin and the Chrome extension with WhatsApp Web, all on your computer, connected over 127.0.0.1. No relay or outside server.](docs/images/architecture.png)
 
+### Benchmark: 2.4× faster, 3.4× fewer tokens than browser automation
+
+Same three questions on the same made-up WhatsApp Web page, asked through Claude Code. Every one of the 36 runs answered correctly. [How it was measured](bench/README.md) · [raw results](bench/results/)
+
+![Benchmark: this plugin answers in 8–10 seconds with about 18k tokens; browser automation takes 20–24 seconds and 46k–77k tokens](docs/images/benchmark.svg)
+
 [![tests](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml)
 ![secure: no send tool](https://img.shields.io/badge/secure-no%20send%20tool-brightgreen)
 ![private: no relay](https://img.shields.io/badge/private-no%20relay%2C%20no%20server-brightgreen)
