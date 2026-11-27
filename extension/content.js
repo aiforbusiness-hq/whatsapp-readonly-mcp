@@ -96,8 +96,14 @@ button.primary { background:var(--primary); border-color:var(--primary); color:v
 button.primary:hover { filter:brightness(1.06); }
 button.ghost { border-color:transparent; background:transparent; color:var(--muted); }
 .msg { font-size:12px; color:var(--muted); margin-left:4px; }
-.pill { border-radius:999px; padding:4px 12px; min-height:28px; font-size:12px; font-weight:700; color:var(--on-primary);
-  border:1px solid var(--primary); background:var(--primary); box-shadow:0 2px 10px rgba(0,0,0,.12); }
+/* 收起时：黄色长条贴在输入框正上方，跟输入区一样宽；点任何地方（或「查看」）打开 */
+.bar { width:100%; display:flex; align-items:center; gap:8px; min-height:36px; padding:8px 16px; border:0; border-radius:10px 10px 0 0;
+  background:var(--primary); color:#221b10; font-size:13px; text-align:left; cursor:pointer; box-shadow:0 -2px 10px rgba(0,0,0,.08); }
+.bar:hover { filter:brightness(1.04); border-color:transparent; }
+.bar b { font-weight:700; white-space:nowrap; }
+.bar .t { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#4a3d1f; }
+.bar .v { font-weight:700; text-decoration:underline; text-underline-offset:3px; white-space:nowrap; }
+.bar .ok { background:#221b10; color:#f5c83b; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; white-space:nowrap; }
 svg { width:14px; height:14px; flex:none; }
 [hidden] { display:none !important; }
 /* 对话里的「不用回」小按钮：在对话标题下方靠右 */
@@ -130,12 +136,12 @@ svg { width:14px; height:14px; flex:none; }
       <span class="msg" id="msg" aria-live="polite"></span>
     </div>
   </div>
-  <button class="pill" id="expand" hidden>AI 草稿 · 点开看</button>
+  <button class="bar" id="expand" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg><b id="barWho">AI 草稿</b><span class="ok" id="barOk" hidden>已填入</span><span class="t" id="barText"></span><span class="v">查看</span></button>
 </div>`;
   AB_LANG_READY.then(() => localizeDOM(root, {
     "AI 草稿预览": "AI draft preview", "收起草稿": "Collapse draft", "AI 草稿": "AI draft",
     "只预览 · 不会自动发送": "Preview only · never sent automatically", "填入输入框": "Fill in", "复制": "Copy",
-    "不用了": "Dismiss", "AI 草稿 · 点开看": "AI draft · click to view"
+    "不用了": "Dismiss", "已填入": "Filled in", "查看": "View"
   }));
   document.documentElement.appendChild(host);
 
@@ -196,19 +202,23 @@ svg { width:14px; height:14px; flex:none; }
       (!document.body.classList.length && matchMedia("(prefers-color-scheme: dark)").matches));
     wrap.style.left = r.left + 12 + "px";
     wrap.style.width = Math.max(240, r.width - 24) + "px";
-    wrap.style.bottom = window.innerHeight - r.top + 8 + "px";
+    // 收起：黄色长条直接贴在输入框上面；打开：卡片离输入框 8px
+    wrap.style.bottom = window.innerHeight - r.top + (collapsed ? 0 : 8) + "px";
     card.hidden = collapsed;
     $("expand").hidden = !collapsed;
-    // 卡片底边离输入框 8px；再多留 8px 空隙
     const wr = wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : null;
-    reserve(wr && wr.height ? wr.height + 16 : 0);
+    reserve(wr && wr.height ? wr.height + (collapsed ? 8 : 16) : 0);
   }
 
   function show(d) {
     if (!d) { current = null; place(); return; }
-    if (!current || current.id !== d.id) { collapsed = false; confirmReplace = false; $("msg").textContent = ""; }
+    if (!current || current.id !== d.id) { collapsed = true; confirmReplace = false; $("msg").textContent = ""; } // 新草稿先以黄色长条出现，点「查看」打开
     current = d;
     $("text").textContent = d.text;
+    const filled = d.status === "inserted";
+    $("barWho").textContent = d.chat_name ? tr("给 ", "AI draft for ") + d.chat_name + tr(" 的 AI 草稿", "") : tr("AI 草稿", "AI draft");
+    $("barOk").hidden = !filled;
+    $("barText").textContent = filled ? tr("· 看一下，再自己按发送", "· check it, then press send yourself") : "· " + d.text.split("\n")[0];
     const st = d.status === "inserted" ? tr(" · 已填入", " · filled in") : d.status === "copied" ? tr(" · 已复制", " · copied") : "";
     $("meta").textContent = (d.chat_name ? tr("给 ", "For ") + d.chat_name + " · " : "") + ago(d.created_at) + st; // 看得到这份草稿是给谁的
     $("fillLabel").textContent = confirmReplace ? tr("替换输入框里的字？再点一次", "Replace the text in the box? Click again") : tr("填入输入框", "Fill in");
@@ -351,7 +361,7 @@ svg { width:14px; height:14px; flex:none; }
       const d = r?.drafts?.find((x) => x.id === id);
       if (!d || a?.chat?.id !== d.chat_id || !composer()) continue;
       current = null; show(d);
-      if ((composer().innerText || "").trim()) { $("msg").textContent = tr("输入框里已经有字，没有覆盖。要换成草稿请按「填入输入框」。", "The message box already has text, so it was not replaced. Press Fill in to use the draft."); return; }
+      if ((composer().innerText || "").trim()) { collapsed = false; place(); $("msg").textContent = tr("输入框里已经有字，没有覆盖。要换成草稿请按「填入输入框」。", "The message box already has text, so it was not replaced. Press Fill in to use the draft."); return; }
       if (fillComposer(d.text)) { mark("inserted", d); d.status = "inserted"; collapsed = true; show(d); }
       return;
     }

@@ -156,16 +156,23 @@ test("the card names the chat, and fills only when the open chat matches", async
   assert.ok(w.log.some((e) => e.event === "paste_into_composer" && e.composer_of_chat === ALICE));
 });
 
-test("after Fill in, the card collapses so it does not cover the chat", async () => {
+test("a draft shows as the yellow bar; View opens it; after Fill in it collapses back to the bar", async () => {
   const w = makeWorld();
   w.page.header = "Alice (dummy)"; w.page.chatId = ALICE;
   w.tick(); await w.flushMicro();
-  w.held.shift().res({ ok: true, chat: { id: ALICE }, drafts: [aliceDraft] }); await w.flushMicro();
-  assert.equal(w.get(".card").hidden, false, "card open before filling");
+  const fresh = { ...aliceDraft, id: "draft-alice-bar", status: "pending" }; // other tests mark the shared one as filled in
+  w.held.shift().res({ ok: true, chat: { id: ALICE }, drafts: [fresh] }); await w.flushMicro();
+  assert.equal(w.get(".card").hidden, true, "starts collapsed");
+  assert.equal(w.get("expand").hidden, false, "yellow bar visible");
+  assert.match(w.get("barWho").textContent, /Alice \(dummy\)/);
+  assert.equal(w.get("barOk").hidden, true);
+  w.get("expand")._h.click({ isTrusted: true });
+  assert.equal(w.get(".card").hidden, false, "View opens the card");
   w.get("fill")._h.click({ isTrusted: true }); for (let i = 0; i < 5; i++) await w.flushMicro();
   assert.ok(w.log.some((e) => e.event === "paste_into_composer" && e.composer_of_chat === ALICE));
-  assert.equal(w.get(".card").hidden, true, "card collapsed after filling");
-  assert.equal(w.get("expand").hidden, false, "small button to open it again");
+  assert.equal(w.get(".card").hidden, true, "collapsed after filling");
+  assert.equal(w.get("expand").hidden, false, "bar stays after filling");
+  assert.equal(w.get("barOk").hidden, false, "bar says Filled in");
 });
 
 test("'online' / 'typing…' changing in the header does not hide the card or block filling", async () => {

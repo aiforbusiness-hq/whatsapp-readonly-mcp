@@ -242,6 +242,8 @@
   try {
     chrome.runtime.onMessage.addListener((m, sender) => {
       if (sender.id === chrome.runtime.id && m?.type === "open_panel" && !open) setOpen(true);
+      // 打开草稿的对话时：仪表板开着会盖住对话，先收起来
+      if (sender.id === chrome.runtime.id && m?.type === "close_panel" && open) setOpen(false);
     });
   } catch (_) {}
   // 弹窗要求打开、但那时 WhatsApp 还没载入：侧栏出现后自动打开（2 分钟内有效）

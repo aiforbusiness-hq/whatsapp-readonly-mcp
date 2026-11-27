@@ -168,6 +168,8 @@ async function openDraftIn(target, d) {
     if (s?.ok && s.logged_in_guess !== false) break;
     await new Promise((r) => setTimeout(r, 1000));
   }
+  // 仪表板开着会盖住对话：先收起来，再打开对话、填入
+  await chrome.tabs.sendMessage(target.id, { type: "close_panel" }).catch(() => {});
   const o = await openChat(d.chat_id, target.id);
   if (o?.ok) chrome.tabs.sendMessage(target.id, { type: "ab_fill_draft", id: d.id }).catch(() => {});
   return o;
