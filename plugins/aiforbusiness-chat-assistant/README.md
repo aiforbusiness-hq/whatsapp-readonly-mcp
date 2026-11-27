@@ -50,4 +50,8 @@ You do not have to say "WhatsApp". Ask "who is waiting for my reply?", "did Aish
 
 What Claude reads through these tools goes to Claude to answer you, like anything else you ask it.
 
+## Disclaimer
+
+Use at your own risk; we are not liable for any loss. Provided "as is" under the MIT License. For research and study, not for commercial use. For business messaging, use the official WhatsApp Business Platform (WABA) or an authorised third-party WhatsApp API provider. Unofficial: not affiliated with WhatsApp, Meta, Anthropic or OpenAI.
+
 Privacy policy: [PRIVACY.md](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/blob/main/PRIVACY.md) · License: MIT

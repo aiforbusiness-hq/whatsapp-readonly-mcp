@@ -31,6 +31,10 @@ Needs the "AI for Business Chat Assistant" plugin in Claude Desktop, Claude Code
 
 A convenience for people who use AI a lot and often need help with WhatsApp: who is waiting for a reply, what a group said, a first draft of an answer. It is read-only and never sends a message to anyone; replies are saved as drafts and the user presses send. There is no send, bulk, broadcast, forward or auto-reply feature, so it cannot be used for spam. It reads only the user's own WhatsApp Web tab (no new linked device, no unofficial account) and works only on the computer where the user's Claude or ChatGPT desktop app is open.
 
+## Disclaimer (paste where the store allows)
+
+Use at your own risk; we are not liable for any loss. For research and study, not for commercial use. For business messaging, use the official WhatsApp Business Platform (WABA) or an authorised third-party WhatsApp API provider. Unofficial: not affiliated with WhatsApp or Meta.
+
 ## Single purpose
 
 Let the user's own AI app (Claude or ChatGPT, running on the same computer) read the user's open WhatsApp Web chats and save reply drafts for the user to send manually.

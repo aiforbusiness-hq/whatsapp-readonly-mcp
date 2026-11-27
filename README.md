@@ -17,7 +17,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Security](#security-design) · [FAQ](#faq) · [Test cases](#test-cases) · [Privacy](PRIVACY.md)
+[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Security](#security-design) · [FAQ](#faq) · [Test cases](#test-cases) · [Privacy](PRIVACY.md) · [Disclaimer](#disclaimer)
 
 ---
 
@@ -205,6 +205,14 @@ sh scripts/release.sh
 
 It checks that every version number matches, runs the tests, builds `dist/aiforbusiness-chat-assistant.mcpb` and the release zip, tags `v<version>`, pushes the tag and publishes a GitHub Release with both files and `SHA256SUMS.txt`. Add `--dry-run` to build and check without tagging or publishing. Bump the version in all manifests first.
 
+## Disclaimer
+
+- **Use at your own risk. We are not liable for any loss.** This software is provided "as is", without warranty of any kind (see the [MIT License](LICENSE)). AI for Business is not responsible for any loss or damage from using it, including lost data, missed or wrong messages, or any action WhatsApp takes on your account.
+- **For research and study.** This project is meant for personal research, study and learning how AI can help with your own chats. It is not meant for commercial use.
+- **For business or commercial messaging, use an official route:** the [WhatsApp Business Platform (official API, WABA)](https://business.whatsapp.com/products/business-platform) or an authorised third-party WhatsApp API provider.
+- **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp, Meta, Anthropic or OpenAI. All trademarks and logos belong to their owners and are used only to show what this works with.
+- **You are responsible** for following WhatsApp's Terms of Service and the laws that apply to you, including privacy law for other people's messages.
+
 ## Contributing
 
 Issues and pull requests are welcome. Every change must keep the read-only rule: no code that sends, marks as read, deletes or changes anything in WhatsApp, and no outside network requests. Run `node --test tests/*.test.mjs` before opening a pull request.
@@ -222,5 +230,7 @@ Issues and pull requests are welcome. Every change must keep the read-only rule:
 - **绝不发送**：程序里没有发送、标已读、删除的功能；草稿由你自己按发送。
 - **资料只在你的电脑**：不经过我们的服务器（我们没有服务器），没有统计、没有广告。
 - **非官方**：跟 WhatsApp / Meta 没有关系。建议先用副号试。
+
+**免责声明：** 使用风险自负，我们不对任何损失负责。本插件仅供研究和学习用途，不作商业用途。商业用途请使用 WhatsApp 官方 API（WABA）或其他第三方 WhatsApp API 服务商。
 
 安装步骤：[`docs/安装说明.md`](docs/安装说明.md) · 技术说明：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
