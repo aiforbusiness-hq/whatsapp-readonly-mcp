@@ -1,12 +1,12 @@
-// AI 通过 MCP 叫 download_media：把那一条信息的文件存进「下载 / AI for Business Chat Assistant」文件夹。
-// 只从 background.js 的 MCP 请求通道呼叫。存档用 Chrome 自己的下载功能（看得到、会做安全检查、不会覆盖旧文件）。
+// The AI calls download_media over MCP: save that message's file into the "Downloads / AI for Business Chat Assistant" folder.
+// Called only from background.js's MCP request channel. Saving uses Chrome's own downloads (visible, safety-checked, never overwrites old files).
 import { runInWa } from "./wa.js";
 import { mediaInPage } from "./downloader.js";
 import { scanner, isProgramName, PREVIEWABLE, typeLabel, deepCheck, DEEP_MAX, safeToDecode, block as blockMsg } from "./scan.js";
 
 const FOLDER = "AI for Business Chat Assistant";
 const CHUNK = 6 * 1024 * 1024;
-const WAIT_MS = 40000;          // AI App 通常等 60 秒；没下完就先回「还在下载」，下次再问接着等
+const WAIT_MS = 40000;          // AI apps usually wait 60 s; if not done, reply "still downloading" and keep waiting on the next ask
 const KEEP_MS = 10 * 60 * 1000;
 const MAX_ACTIVE = 3;
 const ATTACH_MAX = 500000;
@@ -55,8 +55,8 @@ async function run(id) {
   const isImage = /^image\/(jpeg|png|webp|gif|bmp|avif)$/.test(r.mime);
   const isText = /^text\/|[/+](json|xml|csv)$/.test(r.mime) || /\.(txt|csv|md|json|xml|log|vcf|ics)$/i.test(name);
   const av = /^(video|audio)\//.test(r.mime);
-  const keep = !av && r.size <= (isImage ? 25 * 1024 * 1024 : ATTACH_MAX) ? [] : null; // 小文件也直接附给 AI 看
-  let deepParts = r.size <= DEEP_MAX ? [] : null; // 只有 PDF / Office 才留，用来解开检查
+  const keep = !av && r.size <= (isImage ? 25 * 1024 * 1024 : ATTACH_MAX) ? [] : null; // small files are also attached for the AI to see
+  let deepParts = r.size <= DEEP_MAX ? [] : null; // kept only for PDF / Office, for the unpack check
   const sc = scanner();
   try {
     await openOffscreen();
@@ -65,7 +65,7 @@ async function run(id) {
       if (typeof data !== "string") throw new Error("the WhatsApp tab was reloaded or closed");
       const u8 = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
       sc.push(u8);
-      if (!from) { const b = sc.early(name); if (b) return refuse(b, sc.finish(name, r.mime).real); } // 其实是程序：不用接完
+      if (!from) { const b = sc.early(name); if (b) return refuse(b, sc.finish(name, r.mime).real); } // really a program: no need to receive the rest
       const a = await box_({ type: "add", box, data });
       if (!a?.ok) throw new Error("could not hold the file");
       if (keep) keep.push(u8);
@@ -74,7 +74,7 @@ async function run(id) {
     const check = sc.finish(name, r.mime);
     if (check.block) return refuse(check.block, check.real);
     if (check.deep) {
-      // PDF：解开每一个压缩流找程序码；Office：逐个部分解开找巨集 / 内嵌物件。看不完就不存
+      // PDF: unpack every compressed stream to look for code; Office: unpack each part to look for macros / embedded objects. Not saved if the check cannot finish
       const b = await deepCheck(check.deep, deepParts ? join(deepParts) : null);
       deepParts = null;
       if (b) return refuse(b, check.real);
@@ -87,10 +87,10 @@ async function run(id) {
     const blob = keep && new Blob(keep, { type: r.mime });
     let thumbNote = null;
     let thumb = await makeThumb(blob && PREVIEWABLE.has(check.real) && safeToDecode(join(keep)) ? blob : null, r.preview).catch(() => null);
-    if (!thumb && check.real === "video") { // WhatsApp 没留小预览：从影片取一格画面，再重新画一次
+    if (!thumb && check.real === "video") { // WhatsApp kept no preview: grab one video frame, then redraw it
       const fr = await box_({ type: "frame", box, mime: r.mime }).catch(() => null);
       if (fr?.ok && /^\/9j\//.test(fr.data)) thumb = await makeThumb(null, fr.data).catch(() => null);
-      thumbNote = thumb ? "frame: " + fr.how : "no preview: " + String(fr?.why || "frame failed").slice(0, 120); // 只记做法 / 原因，方便查
+      thumbNote = thumb ? "frame: " + fr.how : "no preview: " + String(fr?.why || "frame failed").slice(0, 120); // record only the method / reason, for debugging
     }
     const entry = { ...info, real: check.real, warnings: check.warnings, sha256: r.filehash || null, thumb, thumb_note: thumbNote, download_id: dl };
     if (d.asking) {
@@ -116,8 +116,8 @@ async function run(id) {
   }
 }
 
-// ---------- 仪表板「AI 下载的文件」：只存这台电脑，最多 40 笔、60 天 ----------
-// 存：文件名、对话名、类型、检查结果、重新画过的小缩图（不是原文件）。清空纪录不会删掉已下载的文件。
+// ---------- Dashboard "Files the AI downloaded": stored on this computer only, at most 40 entries, 60 days ----------
+// Stores: file name, chat name, type, check result, a redrawn small thumbnail (not the original file). Clearing the log does not delete downloaded files.
 const LOG = "media_log", LOG_MAX = 40, LOG_DAYS = 60;
 let logQ = Promise.resolve();
 function logMedia(e) {
@@ -134,7 +134,7 @@ function logMedia(e) {
 }
 export async function getMediaLog() {
   const r = await chrome.storage.local.get(LOG);
-  const cut = Date.now() - LOG_DAYS * 86400000; // 保留期限读的时候也算
+  const cut = Date.now() - LOG_DAYS * 86400000; // the retention limit also applies on read
   const list = (Array.isArray(r[LOG]) ? r[LOG] : []).filter((x) => Date.parse(x.time) >= cut);
   for (const x of list) {
     if (x.status !== "saved" || x.download_id == null) continue;
@@ -143,8 +143,8 @@ export async function getMediaLog() {
   }
   return list;
 }
-export const clearMediaLog = () => (logQ = logQ.then(() => chrome.storage.local.remove(LOG)).catch(() => {})); // 跟写入排同一个队
-// 只「在文件夹中显示」，永远不帮用户打开文件（不用 chrome.downloads.open）
+export const clearMediaLog = () => (logQ = logQ.then(() => chrome.storage.local.remove(LOG)).catch(() => {})); // same queue as writes
+// Only "Show in folder"; never open the file for the user (no chrome.downloads.open)
 export async function showFile(downloadId) {
   const list = (await chrome.storage.local.get(LOG))[LOG] || [];
   const x = list.find((y) => y.status === "saved" && y.download_id === downloadId);
@@ -155,12 +155,12 @@ export async function showFile(downloadId) {
   return { ok: true };
 }
 
-// 缩图：一律重新画成新的 JPEG（最大 360 px），原文件里藏的东西（程序码、位置资料）都不会带过来
+// Thumbnail: always redrawn as a new JPEG (max 360 px), so nothing hidden in the original (code, location data) comes along
 async function makeThumb(blob, waPreview) {
   let src = blob;
   if (!src && waPreview && /^(\/9j\/|iVBORw0KGgo|UklGR)/.test(waPreview) && waPreview.length < 400000) {
     const u8 = Uint8Array.from(atob(waPreview), (c) => c.charCodeAt(0));
-    if (safeToDecode(u8)) src = new Blob([u8]); // 先看尺寸：太大的图不解码
+    if (safeToDecode(u8)) src = new Blob([u8]); // check size first: do not decode images that are too big
   }
   if (!src) return null;
   const bmp = await createImageBitmap(src);
@@ -179,7 +179,7 @@ async function makeThumb(blob, waPreview) {
   return null;
 }
 
-// promptForScanning = Chrome 要用户决定要不要深入检查：算「Chrome 在问你」
+// promptForScanning = Chrome wants the user to decide on a deep scan: counts as "Chrome is asking you"
 const OK_DANGER = new Set(["safe", "accepted", "allowlistedByPolicy", "deepScannedSafe", "asyncScanning"]);
 async function finished(id) {
   for (let i = 0; i < 600; i++) {
@@ -192,15 +192,15 @@ async function finished(id) {
   return { state: "in_progress", error: "timeout" };
 }
 
-// ---------- 文件名：对方取的名字不能信 ----------
+// ---------- File names: the sender's name cannot be trusted ----------
 const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/3gpp": "3gp", "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "application/pdf": "pdf" };
 export function safeName(r) {
   let raw = String(r.file_name || "");
-  if (raw.length > 1024) raw = raw.slice(0, 512) + raw.slice(-512); // 先截短：对方给的名字可以很长，正则要花很久
+  if (raw.length > 1024) raw = raw.slice(0, 512) + raw.slice(-512); // shorten first: a sender's name can be very long and slow down the regex
   let n = raw.normalize("NFC")
-    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, "") // 看不见的字元、左右颠倒字元（会让 .exe 看起来像 .jpg）
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, "") // invisible characters, right-to-left characters (can make .exe look like .jpg)
     .replace(/[<>:"/\\|?*~%]/g, "_").replace(/\s+/g, " ");
-  let a = 0, b = n.length; // 去掉开头、结尾的点和空白（不用正则，长名字也快）
+  let a = 0, b = n.length; // strip leading / trailing dots and spaces (no regex, fast for long names)
   while (a < b && (n[a] === "." || n[a] === " ")) a++;
   while (b > a && (n[b - 1] === "." || n[b - 1] === " ")) b--;
   n = n.slice(a, b);
@@ -213,7 +213,7 @@ export function safeName(r) {
   return n;
 }
 
-// ---------- 背景程序不能做下载网址，用一个看不见的插件页面（offscreen）代做 ----------
+// ---------- The background script cannot make download URLs, so a hidden extension page (offscreen) does it ----------
 let opening = null, closing = null;
 async function openOffscreen() {
   await closing;
@@ -243,7 +243,7 @@ async function smallImage(blob) {
   return null;
 }
 
-// get_media 也可能把一个小文件直接交给 AI（reader.js）：跟 download_media 一样检查，不通过就只给资料、不给文件
+// get_media may also hand a small file straight to the AI (reader.js): same checks as download_media; if it fails, give details only, not the file
 export async function vetMedia(r) {
   if (!r?.ok || !r.file?.data) return r;
   const name = safeName({ file_name: r.file.name, mime: r.file.mime, kind: "document" });

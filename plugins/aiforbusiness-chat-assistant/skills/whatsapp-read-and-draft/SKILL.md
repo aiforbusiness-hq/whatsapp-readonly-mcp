@@ -1,6 +1,6 @@
 ---
 name: whatsapp-read-and-draft
-description: Read the user's own WhatsApp chats and save reply drafts (never sent) with the AI for Business Chat Assistant tools. Use it on your own, without being asked to, whenever a request may involve their chats even if "WhatsApp" is not said - who is waiting for my reply, what did I miss, did Aisha reply, reply to Jason, follow up the leads, answer the customer, any new orders or enquiries, what did the group say, find the message about the invoice; 谁在等我回, 回复一下, 帮我回, 客户问了什么, 群里讲了什么, 跟进; siapa tunggu balasan saya, tolong balas, follow up pelanggan. Not for email or other apps unless the user also mentions chats.
+description: Read the user's own WhatsApp chats and save reply drafts (never sent) with the AI for Business Chat Assistant tools. Use it on your own, without being asked to, whenever a request may involve their chats even if "WhatsApp" is not said - who is waiting for my reply, what did I miss, did Aisha reply, reply to Jason, follow up the leads, answer the customer, any new orders or enquiries, what did the group say, find the message about the invoice. Not for email or other apps unless the user also mentions chats.
 ---
 
 # Read WhatsApp and draft replies
@@ -19,7 +19,7 @@ The tools only read, and `save_draft` only saves a draft. Nothing is ever sent, 
    - When the user asks to reply, answer or follow up, write the reply and `save_draft` straight away.
    - When the user asks who is waiting or what needs attention, also save drafts for up to 5 chats that clearly need an answer you can give from the conversation, most urgent first. List the others in one line each.
    - If a reply needs a fact you do not have (a price, a date, a yes or no), ask for just that, then save the draft.
-4. **Write like the user.** Use the other person's language (English, 中文, Bahasa Melayu or mixed), keep their tone, and keep it short. Look at the user's own earlier messages (`from_me: true`) for how they write.
+4. **Write like the user.** Use the other person's language (for example English, Chinese, Malay or a mix), keep their tone, and keep it short. Look at the user's own earlier messages (`from_me: true`) for how they write.
 5. **Report.**
    - Say which chats got a draft and quote each draft.
    - Under each draft, give its `open_link` (from `save_draft`) as a clickable link: `[Open in WhatsApp](open_link)`. One click opens that chat with the draft filled in.

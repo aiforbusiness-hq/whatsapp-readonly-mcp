@@ -1,4 +1,4 @@
-// 界面语言：浏览器是中文就用中文，其他用英文（i18n.js）
+// UI language: Chinese if the browser is Chinese, otherwise English (i18n.js)
 await AB_LANG_READY;
 localizeDOM(document, {
   "只读，绝不发送": "Read-only, never sends",
@@ -10,9 +10,9 @@ localizeDOM(document, {
   "打开对话会标已读，对方会看到蓝勾。": "Opening a chat marks it as read; they will see blue ticks.",
   "草稿只存在这台电脑，保留 90 天。": "Drafts stay on this computer for 90 days.", "请让电脑开着，Chrome 和 WhatsApp Web 也保持打开，AI 才读得到。": "Keep your computer on, with Chrome and WhatsApp Web open, so your AI can read it.", "清空草稿": "Clear drafts"
 });
-// 弹窗：等我回 / AI 草稿 / 全部对话。
-// 没有任何发信息按钮。「打开对话」只在你点时执行（会标已读）。
-// 不把对话内容写进 console。
+// Popup: waiting for my reply / AI drafts / all chats.
+// No send button of any kind. "Open chat" runs only when you click it (this marks it read).
+// Never writes chat content to the console.
 const $ = (s) => document.querySelector(s);
 const listEl = $("#list");
 const statusEl = $("#status");
@@ -29,13 +29,13 @@ function svg(name) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor");
   s.setAttribute("stroke-width", "2"); s.setAttribute("aria-hidden", "true");
-  s.innerHTML = ICON[name]; // 固定图示，不含任何对话内容
+  s.innerHTML = ICON[name]; // Fixed icon, no chat content
   return s;
 }
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
-  if (text != null) e.textContent = text; // 对话内容只用 textContent
+  if (text != null) e.textContent = text; // Chat content goes in via textContent only
   return e;
 }
 function ago(iso) {
@@ -53,7 +53,7 @@ function waited(h) {
   if (h < 48) return tr(`等了 ${Math.round(h)} 小时`, `waiting ${Math.round(h)} h`);
   return tr(`等了 ${Math.round(h / 24)} 天`, `waiting ${Math.round(h / 24)} days`);
 }
-// 最多等 15 秒；背景程序没回应也不会一直显示「正在读取」
+// Wait at most 15 seconds; if the background script doesn't answer, don't show "Loading" forever
 const send = (msg, ms = 15000) => Promise.race([
   chrome.runtime.sendMessage(msg).catch(() => null),
   new Promise((resolve) => setTimeout(() => resolve({ ok: false, code: "TIMEOUT", reason: tr("插件太久没回应，请按右上角重新读取", "The extension took too long. Press refresh at the top right") }), ms))
@@ -66,7 +66,7 @@ function button(label, icon, cls, onClick) {
   b.addEventListener("click", (e) => { if (e.isTrusted) onClick(e, b); });
   return b;
 }
-// 草稿：打开对话，草稿直接填进输入框（不发送）
+// Draft: open the chat and fill the draft into the message box (not sent)
 async function openDraft(id, fb) {
   fb.textContent = tr("打开中…", "Opening…");
   const r = await send({ type: "open_draft", id });
@@ -103,7 +103,7 @@ function renderWaiting(kw) {
     li.append(el("span", "", tr(`另外 ${state.ignored} 个你标了「不用回」`, `${state.ignored} more marked \"No reply needed\"`)), button(tr("全部还原", "Restore all"), "", "link-btn", clearIgnored));
     listEl.append(li);
   }
-  // 查失败就说出来，不要假装「没有人在等你回」
+  // If the lookup fails, say so; don't pretend "nobody is waiting for you"
   if (state.waitingError && !state.waiting.length) return empty(tr("查不到谁在等你回", "Couldn't check who's waiting"), state.waitingError);
   if (!kw && !state.allLoaded && (state.waitingTotal || 0) > state.waiting.length) {
     const li = el("li", "ignored-note");
@@ -132,7 +132,7 @@ function renderWaiting(kw) {
   }
 }
 
-// 「不用回」：跟 WhatsApp 里的仪表板共用同一份清单（chrome.storage.local 的 ignored_waiting）
+// "No reply needed": shares one list with the dashboard inside WhatsApp (ignored_waiting in chrome.storage.local)
 async function ignoreChat(c) {
   const { ignored_waiting: cur = {} } = await chrome.storage.local.get("ignored_waiting");
   cur[c.id] = c.last || c.since;
@@ -159,7 +159,7 @@ function renderDrafts(kw) {
   const rows = state.drafts.filter((d) => !kw || d.chat_name.toLowerCase().includes(kw) || d.text.toLowerCase().includes(kw));
   if (!rows.length) return empty(state.drafts.length ? tr("没有符合的草稿", "No matching drafts") : tr("还没有 AI 草稿", "No AI drafts yet"), state.drafts.length ? "" : tr("在 Claude 或 ChatGPT 说「帮我起草回复给某某」，草稿会出现在这里和 WhatsApp 输入框上方。", "Ask Claude or ChatGPT \"draft a reply to …\". Drafts show up here and above the WhatsApp message box."));
   for (const d of rows) {
-    // 新草稿：还没用、之后还没回、7 天内存的 → 淡黄底 + 「新」
+    // New draft: not used yet, no reply since, saved within 7 days: pale yellow background + "New"
     const fresh = d.status === "pending" && !d.actual_reply && Date.now() - Date.parse(d.created_at) < 7 * 86400000;
     const li = el("li", fresh ? "item new" : "item");
     const l1 = el("div", "line1");
@@ -187,7 +187,7 @@ function renderDrafts(kw) {
         try { await navigator.clipboard.writeText(d.text); fb.textContent = tr("已复制", "Copied"); send({ type: "card_mark", id: d.id, status: "copied" }); }
         catch (_) { fb.textContent = tr("复制失败", "Copy failed"); }
       }),
-      // 删除：按两次才删（第一次变成「确定删除？」，4 秒内再按一次）
+      // Delete: needs two clicks (first click shows "Delete?", click again within 4 seconds)
       button(tr("删除", "Remove"), "trash", "remove", async (e, b) => {
         if (!b.dataset.armed) {
           b.dataset.armed = "1"; b.lastChild.textContent = tr("确定删除？", "Remove? Click again");
@@ -256,7 +256,7 @@ function render() {
   if (state.error) {
     statusEl.className = "status err";
     statusEl.replaceChildren(el("span", "", state.error));
-    // WhatsApp Web 没开 / 睡着 / 太久没回应：给一个按钮直接打开
+    // WhatsApp Web not open / asleep / not responding for too long: show a button to open it
     if (["WA_TAB_NOT_OPEN", "WA_TAB_ASLEEP", "WA_TIMEOUT", "TIMEOUT"].includes(state.errorCode)) {
       statusEl.append(button(tr("打开 WhatsApp Web", "Open WhatsApp Web"), "open", "primary open-wa", async () => {
         await send({ type: "open_whatsapp" });
@@ -271,7 +271,7 @@ function render() {
   if (state.tab === "waiting") renderWaiting(kw); else renderAll(kw);
 }
 
-// 即时索引（chrome.storage.session）：wa_meta 是小总览，打开马上画；c:<id> 是每个对话，搜寻 / 看全部时才读
+// Live index (chrome.storage.session): wa_meta is the small overview, drawn at once on open; c:<id> is one per chat, read only for search / show all
 const SNAP_FRESH_MS = 90000;
 async function fromSnapshot() {
   let meta = null, ig = {};
@@ -286,7 +286,7 @@ async function fromSnapshot() {
   const isIgn = (w) => ig[w.id] && ig[w.id] === (w.last || w.since);
   if (!state.allLoaded) {
     state.waiting = meta.waiting.filter((w) => !isIgn(w));
-    // 被标「不用回」的：直接查那几个对话，不扫全部
+    // Chats marked "no reply needed": look up just those chats, don't scan all
     let ignNow = 0;
     const ids = Object.keys(ig);
     if (ids.length) {
@@ -314,7 +314,7 @@ async function fromSnapshot() {
   else { state.error = null; state.errorCode = null; state.loaded = true; }
   return true;
 }
-// 读全部对话（每个对话一个 key）；只在搜寻或按「显示全部」时
+// Read all chats (one key per chat); only when searching or clicking "Show all"
 async function loadAllChats() {
   try {
     const all = await chrome.storage.session.get(null);
@@ -344,7 +344,7 @@ async function load() {
   send({ type: "wa_refresh_index" });
   const drafts = send({ type: "ui_drafts" });
   if (await fromSnapshot()) {
-    // 先用摘要马上画出来；草稿清单也很快
+    // Draw from the summary right away; the draft list is fast too
     render();
     const d = await drafts;
     state.drafts = d?.ok ? d.drafts : [];
@@ -405,7 +405,7 @@ chrome.storage.onChanged.addListener(async (ch, area) => {
   }
 });
 
-// ---------- 连接 Claude ----------
+// ---------- Connect Claude ----------
 const claudeEl = $("#claude");
 const pairBox = $("#pairBox");
 const pairMsg = $("#pairMsg");
@@ -413,9 +413,9 @@ let firstState = true;
 async function refreshClaude() {
   const s = await send({ type: "state", force: firstState });
   firstState = false;
-  // 绿 = 已连上；黄 = 连接中 / 要配对；红 = 没连上
+  // Green = connected; yellow = connecting / needs pairing; red = not connected
   if (!s) { claudeEl.textContent = tr("没连上", "Not connected"); claudeEl.className = "conn bad"; return; }
-  // 跟 WhatsApp 里的仪表板一样：已连上 / 要配对 / 还没连上过 / AI 没开
+  // Same as the dashboard inside WhatsApp: connected / needs pairing / never connected / AI not open
   if (s.ready > 0) { claudeEl.textContent = tr("已连上 AI", "AI connected"); claudeEl.className = "conn ok"; pairBox.hidden = s.need_pair === 0; }
   else if (s.need_pair > 0) { claudeEl.textContent = tr("要配对", "Needs pairing"); claudeEl.className = "conn warn"; pairBox.hidden = false; }
   else if (s.connecting > 0) { claudeEl.textContent = tr("连接中…", "Connecting…"); claudeEl.className = "conn warn"; pairBox.hidden = true; }
@@ -437,7 +437,7 @@ load();
 refreshClaude();
 setInterval(refreshClaude, 3000);
 
-// 仪表板：切到 WhatsApp Web 分页，在里面打开
+// Dashboard: switch to the WhatsApp Web tab and open it there
 document.getElementById("dash").addEventListener("click", (e) => {
   if (!e.isTrusted) return;
   chrome.runtime.sendMessage({ type: "open_dashboard" }).finally(() => window.close());

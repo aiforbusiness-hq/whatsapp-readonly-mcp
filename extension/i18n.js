@@ -1,9 +1,9 @@
-// Language: English by default. Chinese only when the user picks 中文 in the dashboard settings,
+// Language: English by default. Chinese only when the user picks Chinese in the dashboard settings,
 // or picks "Same as browser" and the browser UI language is Chinese (zh, zh-CN, zh-TW…).
 // Loaded first everywhere (background, popup, content scripts, dashboard page).
 // tr(zh, en) returns the string for the current language.
 // localizeDOM(root, dict) swaps Chinese text and title / aria-label / placeholder attributes in static HTML
-// using a { "中文": "English" } dictionary (only when the language is English).
+// using a { "Chinese text": "English" } dictionary (only when the language is English).
 (() => {
   if (globalThis.__abI18n) return;
   globalThis.__abI18n = true;
@@ -12,7 +12,7 @@
     try { ui = (chrome?.i18n?.getUILanguage?.() || navigator.language || "en").toLowerCase(); } catch (_) {}
     return ui.startsWith("zh") ? "zh" : "en";
   };
-  // 用户在仪表板「设定」选的语言：en（默认）/ zh / auto（跟浏览器），存在 chrome.storage.local 的 ui_lang
+  // Language the user picked in dashboard "Settings": en (default) / zh / auto (same as browser), stored as ui_lang in chrome.storage.local
   let pref = "en";
   let LANG = "en";
   const apply = (p) => {
@@ -30,7 +30,7 @@
   globalThis.localizeDOM = (root, dict) => {
     if (!root || !dict) return;
     const doc = root.ownerDocument || root;
-    if (LANG === "zh") { if (doc.documentElement && root === doc) doc.documentElement.lang = "zh-CN"; return; } // HTML 原文是中文；英文时才替换
+    if (LANG === "zh") { if (doc.documentElement && root === doc) doc.documentElement.lang = "zh-CN"; return; } // HTML source text is Chinese; replaced only when English
     const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const texts = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) texts.push(n);

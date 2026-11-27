@@ -1,16 +1,16 @@
-// 下载一条信息里的图片 / 影片 / 语音 / 文件。在 WhatsApp Web 页面环境（MAIN world）里执行，会被转成文字注入，必须自给自足。
+// Download the photo / video / voice / file in one message. Runs in the WhatsApp Web page (MAIN world); injected as text, so it must be self-contained.
 //
-// 只有 AI 通过 MCP 叫 download_media 时才会执行（background.js 的 request 通道）；弹窗、仪表板、网页都叫不到。
-// 安全规则（不能破）：
-// - 只下载指定的那一条；不点开对话、不标已读、不发已播放回条、不改 WhatsApp 的资料、不叫对方手机重传
-// - 网络只去 WhatsApp 自己的媒体服务器（WhatsApp 自己的下载程序，或 https://mmg.whatsapp.net）
-// - 内容必须跟信息里的 SHA-256 一样才收
-// - 「看一次」的信息一律不下载
+// Runs only when the AI calls download_media over MCP (background.js request channel); the popup, dashboard and web pages cannot call it.
+// Safety rules (must not break):
+// - Download only the one message asked for; do not open the chat, mark as read, send played receipts, change WhatsApp data, or ask the sender's phone to re-upload
+// - Network goes only to WhatsApp's own media servers (WhatsApp's own downloader, or https://mmg.whatsapp.net)
+// - Content is accepted only if it matches the SHA-256 in the message
+// - "View once" messages are never downloaded
 export async function mediaInPage(op, p) {
   const MAX = 200 * 1024 * 1024;
   const fail = (code, reason) => ({ ok: false, code, reason });
   const HOLD = Symbol.for("aifb.media");
-  const hold = window[HOLD] || (window[HOLD] = new Map()); // 暂放，取完就删
+  const hold = window[HOLD] || (window[HOLD] = new Map()); // temporary holding; deleted once taken
   const toB64 = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
   const drop = (t) => { clearTimeout(hold.get(t)?.timer); hold.delete(t); };
 
@@ -21,7 +21,7 @@ export async function mediaInPage(op, p) {
   if (op === "end") { drop(p.token); return true; }
   if (op !== "fetch") return fail("BAD_OP", "Unknown command");
 
-  // 「看一次」：WhatsApp 的任何标记都算（记忆体里的信息，或硬盘里存的原始资料，栏位名称 / 型别可能不同）
+  // "View once": any WhatsApp marker counts (in-memory message or raw data stored on disk; field names / types may differ)
   const isOnce = (m) => {
     if (!m || typeof m !== "object") return false;
     if (m.isViewOnce === true || m.isViewOnce === 1 || m.isViewOnce === "true" || /view_?once/i.test(String(m.type || "") + " " + String(m.subtype || ""))) return true;
@@ -60,13 +60,13 @@ export async function mediaInPage(op, p) {
   const within = (promise, ms) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
   let bytes = null, source = null, gone = false;
 
-  // 1. 已经在记忆体里
+  // 1. Already in memory
   for (const o of [m.mediaObject?.mediaBlob, m.mediaData?.mediaBlob]) {
     if (!bytes && o) { bytes = await good(o._blob instanceof Blob ? o._blob : o); if (bytes) source = "already on this computer"; }
   }
-  // 2. WhatsApp Web 自己的媒体缓存
+  // 2. WhatsApp Web's own media cache
   if (!bytes) { bytes = await fromCache().catch(() => null); if (bytes) source = "already on this computer"; }
-  // 3. 用 WhatsApp Web 自己的下载程序（不经过信息物件，所以不改它的状态）
+  // 3. Use WhatsApp Web's own downloader (bypasses the message object, so its state is not changed)
   if (!bytes && m.directPath && m.mediaKey) {
     const ctl = new AbortController();
     try {
@@ -81,7 +81,7 @@ export async function mediaInPage(op, p) {
       }
     } catch (_) { ctl.abort(); }
   }
-  // 4. 直接从 WhatsApp 的媒体服务器拿加密文件，在这台电脑解密（WhatsApp 的公开加密格式）
+  // 4. Fetch the encrypted file straight from WhatsApp's media server and decrypt it on this computer (WhatsApp's public encryption format)
   if (!bytes && m.directPath && m.mediaKey) {
     try { bytes = await direct(); if (bytes) source = "downloaded from WhatsApp's media server"; } catch (_) {}
   }
@@ -94,7 +94,7 @@ export async function mediaInPage(op, p) {
   const token = crypto.randomUUID();
   hold.set(token, { bytes, timer: setTimeout(() => hold.delete(token), 10 * 60 * 1000) });
   const mime = str(m.mimetype).split(";")[0].toLowerCase() || "application/octet-stream";
-  // WhatsApp 放在信息里的小预览图（影片、PDF 第一页）。只收 JPEG / PNG / WebP，插件还会重新画一次
+  // The small preview WhatsApp keeps in the message (video, PDF first page). Only JPEG / PNG / WebP; the extension redraws it too
   let preview = null;
   for (const v of [m.body, m.thumbnail, m.mediaData?.preview?._b64, m.mediaObject?.contentInfo?._preview?._b64, m.mediaData?.preview]) {
     if (!preview && typeof v === "string" && v.length > 80 && v.length < 400000 && /^(\/9j\/|iVBORw0KGgo|UklGR)[A-Za-z0-9+/=\r\n]+$/.test(v)) preview = v.replace(/\s/g, "");
@@ -148,7 +148,7 @@ export async function mediaInPage(op, p) {
       const res = await fetch(url.href, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", signal: ctl.signal });
       if ([403, 404, 410].includes(res.status)) gone = true;
       if (!res.ok || Number(res.headers.get("content-length")) > MAX + 1024) { ctl.abort(); return null; }
-      // 一边收一边数：超过上限就停（服务器没给长度也一样）
+      // Count while receiving: stop past the limit (even if the server gave no length)
       const rd = res.body.getReader(); const parts = []; let n = 0;
       for (;;) {
         const { value, done } = await rd.read();

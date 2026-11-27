@@ -1,13 +1,13 @@
-// 背景程序：连到本机 MCP 程序（ws://127.0.0.1，固定 10 个端口里找），配对，
-// 收到读取请求就在 WhatsApp 分页里执行只读读取器，把结果传回去。
+// Background script: connects to the local MCP program (ws://127.0.0.1, searched across 10 fixed ports), pairs,
+// and on each read request runs the read-only reader in the WhatsApp tab and sends the result back.
 //
-// 安全：
-// - 只连 127.0.0.1（manifest 的 CSP 也锁死 connect-src ws://127.0.0.1:*）
-// - 只执行白名单里的读取指令 + 草稿清单读写；没有任何发信息 / 标已读 / 打开对话的指令可以从本机程序执行
-// - 「打开对话」只接受插件自己的画面（弹窗、仪表板）里用户亲手点（isTrusted）发来的请求；本机程序 / AI 不能叫
-// - 不把对话内容写进 console 或硬盘；唯一例外：AI 通过 MCP 叫 download_media 时，把那一个文件存进「下载」文件夹（media.js），并在 media_log 记文件名、检查结果和重新画过的小缩图（仪表板「AI 下载的文件」）。
-//   这个指令只接在已配对的 MCP 请求上，弹窗 / 仪表板 / 网页都叫不到
-import "./i18n.js"; // tr()：中文 / 英文
+// Security:
+// - Connects only to 127.0.0.1 (the manifest CSP also locks connect-src to ws://127.0.0.1:*)
+// - Runs only allowlisted read commands + draft list read/write; the local program cannot run any send / mark-read / open-chat command
+// - "Open chat" is accepted only from a real user click (isTrusted) in the extension's own screens (popup, dashboard); the local program / AI cannot call it
+// - Never writes chat content to the console or disk; only exception: when the AI calls download_media over MCP, that one file is saved to the Downloads folder (media.js), and media_log records the file name, check result and a redrawn small thumbnail (dashboard "Files downloaded by AI").
+//   This command is wired only to paired MCP requests; the popup / dashboard / web pages cannot call it
+import "./i18n.js"; // tr(): Chinese / English
 import { runRead, openChat, findWhatsAppTab, focusOrOpenWhatsApp } from "./wa.js";
 import { downloadMedia, getMediaLog, clearMediaLog, showFile, vetMedia } from "./media.js";
 import { addDraft, listDrafts, updateDraft, removeDraft, clearDrafts, reconcile, purgeOld } from "./drafts.js";
@@ -28,7 +28,7 @@ function send(ws, obj) {
   try { ws.send(JSON.stringify(obj)); } catch (_) {}
 }
 
-// 打招呼：只送一个随机数，不送密钥。本机程序要先证明它有密钥，插件才回证明（见 pairing.js）
+// Hello: send only a random nonce, never the key. The local program must prove it has the key before the extension sends its proof (see pairing.js)
 async function hello(entry) {
   entry.ne = b64(rand());
   entry.verified = false;
@@ -44,21 +44,21 @@ function tryConnect(port) {
   ws.onopen = () => hello(entry);
   ws.onclose = () => {
     if (sockets.get(port) === entry) sockets.delete(port);
-    // 已经连上过的本机程序断了：可能只是 AI 重新启动，或另一个 AI 正在接手同一个端口 → 很快再试两次
-    if (entry.state === "ready" || entry.state === "need_pair") for (const ms of [900, 3000]) setTimeout(() => { tryConnect(port); tryConnect(PORTS[0]); }, ms); // 接手的从第一个端口开始占
-    // 连不上（那个本机程序已经关了）→ 忘掉这个端口，免得一直重试、在「错误」页一直记「连线失败」
+    // A local program that was connected dropped: maybe the AI just restarted, or another AI is taking over the same port, so retry twice soon
+    if (entry.state === "ready" || entry.state === "need_pair") for (const ms of [900, 3000]) setTimeout(() => { tryConnect(port); tryConnect(PORTS[0]); }, ms); // The one taking over starts from the first port
+    // Can't connect (that local program has closed): forget this port, so we don't keep retrying and logging "connection failed" on the Errors page
     if (entry.state === "connecting" && port !== PORTS[0]) forgetPort(port);
   };
-  ws.onerror = () => {}; // 端口没人听很正常，不吵
+  ws.onerror = () => {}; // A port with no listener is normal; stay quiet
   ws.onmessage = async (ev) => {
     let msg;
     try { msg = JSON.parse(ev.data); } catch (_) { return; }
     if (!msg || typeof msg !== "object") return;
-    // 配对过程中等待的回覆
+    // Replies awaited during pairing
     if (entry.expect && entry.expect.types.includes(msg.type)) { const fn = entry.expect.resolve; entry.expect = null; fn(msg); return; }
     switch (msg.type) {
       case "hello_auth": {
-        // 本机程序证明它有密钥（绑这个端口）；证明不对 = 不是我们配对过的程序：什么都不送，改走配对
+        // Local program proves it has the key (bound to this port); wrong proof = not a program we paired with: send nothing, go to pairing
         if (entry.state !== "connecting" || msg.v !== PROTOCOL || !isB64Of(msg.ns, 32)) return;
         const sec = await getSecret();
         if (!sec || !sameB64(msg.proof, await helloProof(sec, "srv", port, entry.ne, msg.ns))) {
@@ -72,7 +72,7 @@ function tryConnect(port) {
         break;
       }
       case "hello_ok":
-        if (!entry.verified || entry.state !== "connecting") return; // 没先证明自己的程序，一律不当成已配对
+        if (!entry.verified || entry.state !== "connecting") return; // A program that has not proved itself first is never treated as paired
         entry.state = "ready";
         mark("last_connected");
         setClients(entry, msg);
@@ -88,7 +88,7 @@ function tryConnect(port) {
         break;
       case "need_pair":
         if (entry.verified) return;
-        entry.old = msg.v !== PROTOCOL; // 版本不同的本机程序：不送任何配对资料给它
+        entry.old = msg.v !== PROTOCOL; // Local program on a different version: send it no pairing data
         entry.state = "need_pair";
         rememberPorts();
         entry.server = msg.server || null;
@@ -106,21 +106,21 @@ function tryConnect(port) {
         if (entry.state !== "ready") return send(ws, { type: "response", id: msg.id, result: { ok: false, code: "NOT_PAIRED", reason: tr("插件还没配对", "The extension is not paired yet") } });
         let result;
         const t0 = Date.now();
-        // 几个 AI 共用一条连线：每个请求自己带是哪个 AI 问的
+        // Several AIs share one connection: each request says which AI asked
         const client = msg.client ? String(msg.client).slice(0, 80) : entry.client || "ai";
         if (!entry.clients.length) entry.client = client;
         try {
-          if (msg.op === "get_media") result = await vetMedia(await readOp(msg.op, msg.params || {})); // 文件也要先检查
+          if (msg.op === "get_media") result = await vetMedia(await readOp(msg.op, msg.params || {})); // Files are checked first too
           else if (READ_OPS.has(msg.op)) result = await skipIgnored(msg.op, msg.params || {}, await readOp(msg.op, msg.params || {}));
           else if (msg.op === "download_media") result = await downloadMedia(msg.params || {});
           else if (DRAFT_OPS.has(msg.op)) result = await draftOp(msg.op, msg.params || {});
           else result = { ok: false, code: "OP_NOT_ALLOWED", reason: tr("插件只做只读读取和存草稿，不接受这个指令", "The extension only reads and saves drafts; it does not accept this command") };
         } catch (e) {
-          // 出错也一定回覆，AI 不会一直等
+          // Always reply, even on error, so the AI never waits forever
           result = { ok: false, code: "EXTENSION_ERROR", reason: tr("插件出错：", "Extension error: ") + String(e?.message || e) };
         }
         send(ws, { type: "response", id: msg.id, result });
-        // 本机活动纪录（不存信息内容）
+        // Local activity log (no message content)
         logRequest({
           time: new Date(t0).toISOString(), ms: Date.now() - t0, port,
           client, op: String(msg.op || "").slice(0, 40),
@@ -133,8 +133,8 @@ function tryConnect(port) {
   };
 }
 
-// 用户在仪表板 / 弹窗按了「不用回」的对话：不算「在等你回」，直到对方再传新信息
-// （AI 用 list_awaiting_reply 也一样；要看全部可以传 include_ignored: true）
+// Chats the user marked "no reply needed" in the dashboard / popup: not counted as "waiting for you" until the other person sends a new message
+// (same for the AI with list_awaiting_reply; pass include_ignored: true to see all)
 async function skipIgnored(op, params, r) {
   if (op !== "list_awaiting_reply" || !r?.ok || params.include_ignored) return r;
   const { ignored_waiting: ig } = await chrome.storage.local.get("ignored_waiting");
@@ -146,7 +146,7 @@ async function skipIgnored(op, params, r) {
     note: [r.note, tr(`另外 ${n} 个对话用户标了「不用回」，没列出来（对方再传新信息就会回来）`, `${n} more chats were marked \"No reply needed\" by the user and are not listed (they come back when the other person sends a new message)`)].filter(Boolean).join("；") };
 }
 
-// 「在 WhatsApp 打开」链接：用已经开着的 WhatsApp 分页（新开的那个关掉），打开草稿的对话，再叫页面填入草稿
+// "Open in WhatsApp" link: use the WhatsApp tab already open (close the newly opened one), open the draft's chat, then have the page fill in the draft
 async function openDraftLink(id, linkTab) {
   const d = (await listDrafts({ limit: 2000 })).find((x) => x.id === id);
   if (!d) return { ok: false };
@@ -159,23 +159,23 @@ async function openDraftLink(id, linkTab) {
   openDraftIn(target, d).catch(() => {});
   return { ok: true, close };
 }
-// 打开草稿的对话并填入（链接、弹窗、仪表板的「打开」都用这个）。只填入，不发送
+// Open the draft's chat and fill it in (used by the link, popup and dashboard "Open"). Fills only, never sends
 async function openDraftIn(target, d) {
   if (target.discarded || target.status === "unloaded") await chrome.tabs.reload(target.id).catch(() => {});
-  // 等 WhatsApp Web 载入好（新分页或刚叫醒的分页要一点时间），最多 60 秒
+  // Wait for WhatsApp Web to load (a new or just-woken tab takes a moment), at most 60 seconds
   for (let i = 0; i < 60; i++) {
     const s = await runRead("status", {}, target.id).catch(() => null);
     if (s?.ok && s.logged_in_guess !== false) break;
     await new Promise((r) => setTimeout(r, 1000));
   }
-  // 仪表板开着会盖住对话：先收起来，再打开对话、填入
+  // An open dashboard covers the chat: close it first, then open the chat and fill in
   await chrome.tabs.sendMessage(target.id, { type: "close_panel" }).catch(() => {});
   const o = await openChat(d.chat_id, target.id);
   if (o?.ok) chrome.tabs.sendMessage(target.id, { type: "ab_fill_draft", id: d.id }).catch(() => {});
   return o;
 }
 
-// ---------- 草稿 ----------
+// ---------- Drafts ----------
 async function draftOp(op, p) {
   if (op === "save_draft") {
     const r = await runRead("resolve_chat", { chat: p.chat });
@@ -202,7 +202,7 @@ async function draftOp(op, p) {
     }
     let list = await listDrafts({ chatId, since: p.since, status: p.status, limit: p.limit });
     if (p.include_actual !== false) {
-      // 用对话里我发的信息补上「真人实际回复」（之后读不到时，已存的照样保留）
+      // Fill in the "actual human reply" from my messages in the chat (if it can't be read later, what's saved is kept)
       const chats = [...new Set(list.filter((d) => !d.actual_reply).map((d) => d.chat_id))].slice(0, 40);
       let changed = false;
       for (const id of chats) {
@@ -217,7 +217,7 @@ async function draftOp(op, p) {
   return { ok: false, code: "BAD_OP", reason: tr("未知的草稿指令", "Unknown draft command") };
 }
 
-// WhatsApp 页面里的预览卡：问「现在打开的对话有没有草稿」
+// Preview card in the WhatsApp page: asks "does the open chat have a draft?"
 async function draftsForActive(tabId) {
   const a = await runRead("active_chat", {}, tabId);
   if (!a.ok || !a.chat?.id) return { ok: true, chat: null, drafts: [] };
@@ -228,7 +228,7 @@ async function draftsForActive(tabId) {
   return { ok: true, chat: a.chat, drafts: list };
 }
 
-// 这条连线上有哪些 AI（新版本机程序会给整份名单；旧版只有一个 client）
+// Which AIs are on this connection (newer local programs give the full list; older ones only one client)
 function setClients(entry, msg) {
   if (msg.client) entry.client = String(msg.client).slice(0, 80);
   if (Array.isArray(msg.clients)) entry.clients = [...new Set(msg.clients.filter((x) => typeof x === "string" && x).map((x) => x.slice(0, 80)))].slice(0, 40);
@@ -239,10 +239,10 @@ function connectPeers(peers) {
   for (const p of peers) if (PORTS.includes(p)) tryConnect(p);
 }
 
-// 找本机程序。没人听的端口，Chrome 会在「错误」页记一笔「连线失败」（无害，但吵）。所以：
-// - 本机程序从第一个端口 47821 开始占；已连上的程序会告诉插件其他程序的端口（peers）
-// - 背景闹钟只试 47821 + 上次连过的端口；一直找不到就放慢到每 2 分钟一次
-// - 只有用户点开插件弹窗时，才把 10 个端口全部找一遍
+// Find local programs. For a port with no listener, Chrome logs "connection failed" on the Errors page (harmless but noisy). So:
+// - Local programs take ports starting from 47821; a connected program tells the extension the other programs' ports (peers)
+// - The background alarm only tries 47821 + the last connected ports; if nothing is found for a while, slow down to once every 2 minutes
+// - Only when the user opens the extension popup are all 10 ports searched
 let lastScan = 0;
 let lastMainTry = 0;
 let misses = 0;
@@ -257,27 +257,27 @@ function anyReady() {
 async function probe() {
   tick++;
   if (anyReady()) { misses = 0; return; }
-  if (misses >= 10 && tick % 4 !== 0) return; // 放慢
+  if (misses >= 10 && tick % 4 !== 0) return; // Slow down
   const ports = new Set([PORTS[0], ...(await knownPorts())]);
   for (const p of ports) tryConnect(p);
   setTimeout(() => { misses = anyReady() ? 0 : misses + 1; }, 3000);
 }
-// 用户打开弹窗 / 仪表板：把还没连上的端口都找一遍（就算已经有一个 AI 连着，另一个 AI 可能刚打开）
+// User opens the popup / dashboard: search all ports not yet connected (even if one AI is connected, another may have just started)
 function connectAll(force = false) {
   const now = Date.now();
   if (now - lastScan < (force ? 3000 : 15000)) return;
   lastScan = now;
-  misses = 0; // 用户刚打开画面：恢复正常速度去找
+  misses = 0; // User just opened a screen: back to normal search speed
   for (const port of PORTS) tryConnect(port);
 }
 
-// 插件安装 / 更新 / Chrome 重新打开：把程序重新放进已经开着的 WhatsApp 分页，
-// 不用用户手动重新整理（旧的那份会自己收起来，见 sidebar.js / content.js）
-// 让内容脚本能写 chrome.storage.session（索引摘要放这里：只在记忆体）
+// Extension install / update / Chrome reopen: re-inject the scripts into WhatsApp tabs already open,
+// so the user doesn't have to reload by hand (the old copy shuts itself down, see sidebar.js / content.js)
+// Let content scripts write chrome.storage.session (the index summary lives here: memory only)
 try { chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" }); } catch (_) {}
 
-// ---------- 即时索引（indexer.js）存在 chrome.storage.session 的资料 ----------
-// wa_meta：小总览（总数、统计、等你回、最近 100 个）；c:<id>：每个对话一份摘要（全部对话，没有上限）
+// ---------- Live index (indexer.js) data stored in chrome.storage.session ----------
+// wa_meta: small overview (totals, stats, waiting for you, latest 100); c:<id>: one summary per chat (all chats, no limit)
 const SNAP_FRESH_MS = 90000;
 async function getMeta() {
   try {
@@ -286,7 +286,7 @@ async function getMeta() {
   } catch (_) {}
   return null;
 }
-async function allChatRows() { // 只在需要「全部对话」时读（搜寻、过滤、超过 100 个）
+async function allChatRows() { // Read only when "all chats" is needed (search, filter, more than 100)
   const all = await chrome.storage.session.get(null);
   const rows = [];
   for (const k in all) if (k.startsWith("c:")) rows.push(all[k]);
@@ -298,7 +298,7 @@ async function askIndexRefresh() {
   if (tab) chrome.tabs.sendMessage(tab.id, { type: "wa_refresh_index" }).catch(() => {});
 }
 const stripRow = ({ loaded, oldest_loaded, their_last_message, their_last_sender, since, last, ...r }) => r;
-// 列表类的读取先用索引（很快）；索引太旧或没有才去 WhatsApp 现读
+// List reads use the index first (fast); only read WhatsApp live if the index is too old or missing
 async function readFast(op, p) {
   const meta = await getMeta();
   if (!meta) return runRead(op, p);
@@ -316,8 +316,8 @@ async function readFast(op, p) {
       count: Math.min(rows.length, limit), chats: rows.slice(0, limit).map(stripRow) };
   }
   if (op === "list_awaiting_reply") {
-    // 给 AI 的顺序：最新在等的排最前（今天的客户比几个月前的广告重要）；
-    // 「不用回」先拿掉再截取数量，不然前面几个都被标了不用回时会回传空的
+    // Order for the AI: newest waiting first (today's customer matters more than an ad from months ago);
+    // remove "no reply needed" before applying the limit, or the result is empty when the first few are all marked
     const limit = Math.max(1, Math.min(Number(p.limit) || 50, 200));
     const now = Date.now();
     let list = meta.waiting;
@@ -371,7 +371,7 @@ async function rememberPorts() {
   if (ports.length) await chrome.storage.local.set({ lastPorts: ports });
 }
 
-// ---------- 我的资料 ----------
+// ---------- My data ----------
 const DATA_KINDS = ["drafts", "activity", "media", "index", "ignored", "settings", "pairing"];
 async function dataSummary() {
   const L = await chrome.storage.local.get(null);
@@ -402,7 +402,7 @@ async function clearData(kinds) {
     const S = await chrome.storage.session.get(null).catch(() => ({}));
     const keys = Object.keys(S).filter((k) => k.startsWith("c:") || k === "wa_meta");
     if (keys.length) await chrome.storage.session.remove(keys);
-    askIndexRefresh(); // WhatsApp 开着的话，重新整理一份（只存在 Chrome 关掉就消失的暂存区）
+    askIndexRefresh(); // If WhatsApp is open, rebuild it (kept only in temporary storage that clears when Chrome closes)
   }
   if (want.has("pairing")) {
     await chrome.storage.local.remove(["secret", "lastPorts"]);
@@ -411,8 +411,8 @@ async function clearData(kinds) {
   return { ok: true, cleared: [...want] };
 }
 
-// 配对：配对码只在这里用来算 SPAKE2，不会送出去。本机程序要先证明它知道同一个码（假程序做不到，每次也只能猜一个码），
-// 然后密钥用一次性的金钥加密送过来（见 pairing.js）
+// Pairing: the pairing code is used here only to compute SPAKE2 and is never sent. The local program must first prove it knows the same code (a fake one can't, and gets only one guess each time),
+// then the key is sent encrypted with a one-time key (see pairing.js)
 function expect(entry, types, ms, sendFn) {
   return new Promise((resolve) => {
     const t = setTimeout(() => { if (entry.expect?.resolve === done) entry.expect = null; resolve(null); }, ms);
@@ -421,7 +421,7 @@ function expect(entry, types, ms, sendFn) {
     sendFn();
   });
 }
-// 只显示插件自己的文字：本机程序（可能是假的）送来的说明不直接给用户看
+// Show only the extension's own text: messages from the local program (which may be fake) are never shown to the user directly
 function pairFailText(code) {
   return {
     LOCKED: tr("配对试太多次，暂停了。请完全关掉 AI（Claude / ChatGPT）再打开，然后重新问「WhatsApp 状态」。", "Too many pairing tries, so pairing is paused. Fully quit your AI app (Claude / ChatGPT), reopen it, then ask \"WhatsApp status\" again."),
@@ -435,7 +435,7 @@ async function pairOne(entry, code) {
   if (!srv) return { ok: false, reason: tr("本机程序没有回应", "The local server did not respond") };
   if (srv.type === "pair_failed") return { ok: false, reason: pairFailText(srv.code) };
   if (!isB64Of(srv.ns, 32) || !isB64Of(srv.pb, 65) || typeof srv.mac !== "string") return { ok: false, reason: tr("本机程序回覆不对", "The local server answered wrongly") };
-  // 码不对，或对方不是真的本机程序：算出来的不一样，什么都不送
+  // Wrong code, or not the real local program: the results differ, so send nothing
   const fin1 = await extFinish(st, srv.ns, srv.pb, srv.mac);
   if (!fin1.ok) {
     send(entry.ws, { type: "pair_abort" });
@@ -453,7 +453,7 @@ async function pairOne(entry, code) {
   setClients(entry, fin);
   connectPeers(fin.peers);
   mark("last_connected");
-  // 其他还没配对的本机程序：重新打招呼（它们共用同一把密钥）
+  // Other local programs not yet paired: say hello again (they share the same key)
   for (const e of sockets.values()) if (e !== entry && e.state === "need_pair" && !e.old) { e.state = "connecting"; hello(e); }
   return { ok: true };
 }
@@ -488,19 +488,19 @@ function state() {
   };
 }
 
-// 保持连线：每 20 秒打一次招呼（Chrome 才不会让背景程序睡着）
+// Keep alive: ping every 20 seconds (so Chrome doesn't put the background script to sleep)
 setInterval(() => {
   for (const e of sockets.values()) if (e.state !== "connecting") send(e.ws, { type: "ping" });
 }, 20000);
 
-// 背景程序睡着后，每 30 秒被闹钟叫醒再找本机程序
+// After the background script sleeps, an alarm wakes it every 30 seconds to look for local programs
 chrome.alarms.create("reconnect", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === "reconnect") probe(); });
 chrome.runtime.onStartup.addListener(() => { probe(); purgeOld(); });
 chrome.runtime.onInstalled.addListener(() => { probe(); attachToOpenWhatsAppTabs(); });
 
-// 仪表板资料：草稿（先补上实际回复）、统计、活动纪录、连线
-// WhatsApp 读不到（没开 / 睡着 / 卡住）就不要一个一个对话去试，免得要等好几分钟
+// Dashboard data: drafts (actual replies filled in first), stats, activity log, connections
+// If WhatsApp can't be read (not open / asleep / stuck), don't try chat by chat, or it takes minutes
 const TAB_LEVEL = new Set(["WA_TAB_NOT_OPEN", "WA_TAB_ASLEEP", "WA_TIMEOUT", "WA_NOT_READY", "WA_NO_COLLECTIONS", "WA_NO_CHATS", "INJECT_FAILED", "NO_RESULT"]);
 const waDown = (r) => !r?.ok && TAB_LEVEL.has(r?.code);
 
@@ -528,7 +528,7 @@ async function dashData() {
   };
 }
 
-// 导出用：有草稿的那些对话，按时间排好的信息（收到 + 我发出），只给仪表板，只存成用户自己下载的文件
+// For export: messages in chats that have drafts, in time order (received + sent by me); dashboard only, saved only as a file the user downloads
 async function timeline(chatIds, since) {
   const ids = [...new Set((Array.isArray(chatIds) ? chatIds : []).map(String))].slice(0, 60);
   const out = [];
@@ -545,7 +545,7 @@ async function timeline(chatIds, since) {
 async function openDashboardInWhatsApp() {
   const tab = await findWhatsAppTab();
   if (!tab) {
-    // 还没开 WhatsApp Web：开一个，载入好后侧栏程序会自动打开仪表板
+    // WhatsApp Web not open yet: open one; once loaded, the sidebar script opens the dashboard automatically
     await chrome.storage.local.set({ open_dash_at: Date.now() });
     await chrome.tabs.create({ url: "https://web.whatsapp.com/" });
     return { ok: true, opened: "new_tab" };
@@ -554,7 +554,7 @@ async function openDashboardInWhatsApp() {
   await chrome.windows.update(tab.windowId, { focused: true });
   try { await chrome.tabs.sendMessage(tab.id, { type: "open_panel" }); }
   catch (_) {
-    // 分页里的程序是旧的（插件刚更新过）→ 重新整理那一页，载入后自动打开
+    // The script in the tab is old (extension just updated): reload that page and open automatically after load
     await chrome.storage.local.set({ open_dash_at: Date.now() });
     await chrome.tabs.reload(tab.id);
   }
@@ -571,8 +571,8 @@ async function dashAssets() {
 }
 
 const POPUP_URL = chrome.runtime.getURL("popup.html");
-// 仪表板：插件自己的页面（独立分页，或嵌在 WhatsApp 页面里的 iframe）。网页本身不能冒充：
-// 没有 externally_connectable，网页无法送讯息给插件；内容脚本的 sender.url 是 https://web.whatsapp.com
+// Dashboard: the extension's own page (its own tab, or an iframe inside the WhatsApp page). Web pages can't fake it:
+// with no externally_connectable, web pages can't message the extension; a content script's sender.url is https://web.whatsapp.com
 const EXT_ORIGIN = new URL(chrome.runtime.getURL("")).origin;
 const fromDash = (sender) => {
   try {
@@ -580,19 +580,19 @@ const fromDash = (sender) => {
     return u.origin === EXT_ORIGIN && u.pathname === "/dashboard.html";
   } catch (_) { return false; }
 };
-// 插件自己的弹窗页（也可能被开在分页里）。网页和内容脚本的 sender.url 不会是插件网址
+// The extension's own popup page (may also be opened in a tab). sender.url of web pages and content scripts is never an extension URL
 const fromPopup = (sender) => typeof sender.url === "string" && sender.url.startsWith(POPUP_URL);
-// WhatsApp 分页里的内容脚本；无痕视窗一律不算（插件也设成不在无痕视窗执行）
+// Content script in a WhatsApp tab; incognito windows never count (the extension is also set not to run in incognito)
 const fromWaPage = (sender) => !!sender.tab && !sender.tab.incognito && typeof sender.url === "string" && sender.url.startsWith("https://web.whatsapp.com/");
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (sender.id !== chrome.runtime.id) return false;
-  // 页面预览卡
+  // Page preview card
   if (msg?.type === "card_drafts" && fromWaPage(sender)) {
     draftsForActive(sender.tab.id).then(reply, (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
-  // 草稿卡按「填入」时：这个分页现在打开的是哪个对话
+  // When "Fill in" is clicked on a draft card: which chat this tab has open now
   if (msg?.type === "card_active_chat" && fromWaPage(sender)) {
     runRead("active_chat", {}, sender.tab.id).then(reply, () => reply({ ok: false }));
     return true;
@@ -604,15 +604,15 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     updateDraft(String(msg.id), { status: msg.status, [f]: new Date().toISOString() }).then((d) => reply({ ok: !!d }));
     return true;
   }
-  // 弹窗
-  // WhatsApp 页面里的仪表板：给它画面（HTML）和样式（CSS），由内容脚本放进 closed shadow DOM
+  // Popup
+  // Dashboard inside the WhatsApp page: give it the markup (HTML) and styles (CSS); the content script puts them in a closed shadow DOM
   if (msg?.type === "dash_assets" && fromWaPage(sender)) {
     dashAssets().then(reply, () => reply({ ok: false }));
     return true;
   }
   if (msg?.type === "dash_data" && (fromDash(sender) || fromWaPage(sender))) {
-    connectAll(true); // 打开仪表板：顺便重新连线
-    // 先拿资料再记「这次打开」，这样画面上显示的是「上一次打开」
+    connectAll(true); // Opening the dashboard: reconnect as well
+    // Get the data before recording "this open", so the screen shows the "last opened" time
     dashData().then((r) => { mark("last_dashboard"); reply(r); }, (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
@@ -620,10 +620,10 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     timeline(msg.chat_ids, msg.since).then(reply, (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
-  // 仪表板：只问连线状态（每几秒一次，顺便叫背景程序找本机程序）
+  // Dashboard: asks only for connection status (every few seconds, also prompting the background script to look for local programs)
   if (msg?.type === "dash_state" && (fromDash(sender) || fromWaPage(sender))) {
-    probe(); // 只试主端口 + 上次连过的，不扫全部（免得「错误」页一直记）
-    if (!sockets.has(PORTS[0]) && Date.now() - lastMainTry > 30000) { lastMainTry = Date.now(); tryConnect(PORTS[0]); } // 主端口（通常是 Claude）没连着就补试，最多 30 秒一次
+    probe(); // Try only the main port + last connected ones, not all (so the Errors page doesn't keep logging)
+    if (!sockets.has(PORTS[0]) && Date.now() - lastMainTry > 30000) { lastMainTry = Date.now(); tryConnect(PORTS[0]); } // If the main port (usually Claude) isn't connected, try it again, at most once every 30 seconds
     getSecret().then((sec) => setTimeout(() => reply({ ...state(), paired: !!sec }), 400));
     return true;
   }
@@ -635,12 +635,12 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     clearActivity().then(() => reply({ ok: true }), (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
-  // 「AI 下载的文件」：只能在文件夹中显示（不打开）、清空纪录（不删文件）
+  // "Files downloaded by AI": can only show in folder (not open) and clear the log (files are not deleted)
   if (msg?.type === "dash_show_file" && (fromDash(sender) || fromWaPage(sender))) {
     showFile(Number(msg.download_id)).then(reply, () => reply({ ok: false }));
     return true;
   }
-  // 「我的资料」：这个插件在这台电脑存了什么、清除（不删已下载的文件）
+  // "My data": what this extension stores on this computer, and clearing it (downloaded files are not deleted)
   if (msg?.type === "dash_data_summary" && (fromDash(sender) || fromWaPage(sender))) {
     dataSummary().then(reply, () => reply({ ok: false }));
     return true;
@@ -653,17 +653,17 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     clearMediaLog().then(() => reply({ ok: true }), () => reply({ ok: false }));
     return true;
   }
-  // 「仪表板」= 在 WhatsApp Web 页面里打开（不另开插件页面）
+  // "Dashboard" = open inside the WhatsApp Web page (no separate extension page)
   if (msg?.type === "open_dashboard" && (fromPopup(sender) || fromDash(sender))) {
     openDashboardInWhatsApp().then(reply, () => reply({ ok: false }));
     return true;
   }
-  // 「在 WhatsApp 打开」链接（link.js）：草稿 id 对得上才动作；只打开对话、填入，不发送
+  // "Open in WhatsApp" link (link.js): acts only if the draft id matches; only opens the chat and fills in, never sends
   if (msg?.type === "open_draft_link" && fromWaPage(sender)) {
     openDraftLink(String(msg.id || ""), sender.tab).then(reply, () => reply({ ok: false }));
     return true;
   }
-  // 弹窗 / 仪表板的草稿「打开」：打开对话并填入草稿
+  // Draft "Open" in the popup / dashboard: open the chat and fill in the draft
   if (msg?.type === "open_draft" && (fromPopup(sender) || fromDash(sender) || fromWaPage(sender))) {
     (async () => {
       const d = (await listDrafts({ limit: 2000 })).find((x) => x.id === String(msg.id || ""));
@@ -691,7 +691,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     listDrafts({ limit: 300 }).then((drafts) => reply({ ok: true, drafts }));
     return true;
   }
-  // 删一条草稿：只有插件自己的弹窗和仪表板可以（AI 没有这个工具）
+  // Delete a draft: only the extension's own popup and dashboard can (the AI has no such tool)
   if (msg?.type === "remove_draft" && (fromPopup(sender) || fromDash(sender) || fromWaPage(sender))) {
     removeDraft(String(msg.id || "")).then((ok) => reply({ ok }), (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
@@ -700,7 +700,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     clearDrafts().then(() => reply({ ok: true }), (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
-  // WhatsApp 页面刚打开：马上去连本机程序
+  // WhatsApp page just opened: connect to local programs right away
   if (msg?.type === "wa_opened" && fromWaPage(sender)) {
     connectAll(true);
     reply({ ok: true });
@@ -709,8 +709,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.type === "wa_refresh_index" && fromPopup(sender)) { askIndexRefresh(); reply({ ok: true }); return false; }
   if (msg?.type === "state" && (fromPopup(sender) || fromDash(sender))) {
     if (fromPopup(sender)) mark("last_popup");
-    connectAll(!!msg.force); // 用户点开弹窗：全部端口找一遍
-    // 给连线一点时间
+    connectAll(!!msg.force); // User opened the popup: search all ports
+    // Give the connection a moment
     getSecret().then((sec) => setTimeout(() => reply({ ...state(), paired: !!sec }), 600));
     return true;
   }

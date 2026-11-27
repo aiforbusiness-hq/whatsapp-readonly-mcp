@@ -1,9 +1,9 @@
-// 唯一会改变 WhatsApp 画面的动作：打开一个对话（等于你自己在左边点那个对话）。
-// - 只在用户亲手点插件弹窗的「打开对话」时执行（background.js 检查来源是弹窗）
-// - 打开对话会让 WhatsApp 标已读、对方看到蓝勾：这是用户自己要读、要回的
-// - 这里没有发信息、没有填字、没有按 Enter
-// 在 MAIN world 执行，必须自给自足。
-// 在 WhatsApp 页面里没有 tr()：文字由插件这边先选好语言再传进来（en = true 用英文）
+// The only action that changes the WhatsApp screen: open a chat (the same as you clicking that chat on the left yourself).
+// - Runs only when the user clicks "Open chat" in the extension popup by hand (background.js checks that the request came from the popup)
+// - Opening a chat makes WhatsApp mark it as read, and the other person sees blue ticks: the user chose to read and reply
+// - Nothing here sends a message, types text or presses Enter
+// Runs in the MAIN world, so it must be self-contained.
+// There is no tr() inside the WhatsApp page: the extension picks the language first and passes the text in (en = true means English)
 export async function openChatInPage(chatId, en) {
   const tr = (zh, eng) => (en ? eng : zh);
   if (typeof window.require !== "function") return { ok: false, reason: tr("WhatsApp Web 还没载入完", "WhatsApp Web hasn't finished loading") };

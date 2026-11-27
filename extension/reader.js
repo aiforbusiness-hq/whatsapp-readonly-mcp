@@ -1,13 +1,13 @@
-// 只读读取器：在 WhatsApp Web 页面环境（MAIN world）里执行。
-// 由 chrome.scripting.executeScript({ world: "MAIN", func: readWhatsApp }) 注入。
-// 注意：这个函数会被转成文字注入页面，所以必须自给自足，不能引用外面的变量。
+// Read-only reader: runs in the WhatsApp Web page (MAIN world).
+// Injected by chrome.scripting.executeScript({ world: "MAIN", func: readWhatsApp }).
+// Note: this function is turned into text and injected, so it must be self-contained and cannot use outside variables.
 //
-// 安全规则（不能破）：
-// - 只读取属性、getModelsArray()、IndexedDB 的 readonly 交易
-//   不调用任何会改状态的函数（没有 send / reply / forward / delete / markSeen / sendSeen / 打开对话）
-// - 不点击、不输入、不改 DOM
-// - 不发网络请求
-// - IndexedDB：先确认资料库存在才打开（不存在时 open 会新建＝写入），不带版本号（不升级），只开 readonly
+// Safety rules (must not break):
+// - Only read properties, getModelsArray(), and IndexedDB readonly transactions
+//   Never call anything that changes state (no send / reply / forward / delete / markSeen / sendSeen / open chat)
+// - No clicks, no typing, no DOM changes
+// - No network requests
+// - IndexedDB: open only after confirming the database exists (open on a missing one creates it = a write), no version (no upgrade), readonly only
 export async function readWhatsApp(op, params) {
   const p = params || {};
   const SYSTEM_TYPES = new Set([
@@ -19,11 +19,11 @@ export async function readWhatsApp(op, params) {
     c?.id?._serialized === "0@c.us" ||
     c?.id?.server === "newsletter" ||
     c?.id?.server === "broadcast";
-  // 新版 WhatsApp Web 的 isGroup 常常是 false，要看 id 是不是 @g.us
+  // In newer WhatsApp Web isGroup is often false; check whether the id ends in @g.us
   const isGroupChat = (c) => c?.isGroup === true || c?.id?.server === "g.us" || /@g\.us$/.test(c?.id?._serialized || "");
   const iso = (t) => (t ? new Date(t * 1000).toISOString() : null);
   // --- textOf (keep the same in reader.js and indexer.js; tests check it) ---
-  // 「看一次」：WhatsApp 的任何标记都算（记忆体里的信息，或硬盘里存的原始资料，栏位名称 / 型别可能不同）
+  // "View once": any WhatsApp marker counts (in-memory message or raw data stored on disk; field names / types may differ)
   const isOnce = (m) => {
     if (!m || typeof m !== "object") return false;
     if (m.isViewOnce === true || m.isViewOnce === 1 || m.isViewOnce === "true" || /view_?once/i.test(String(m.type || "") + " " + String(m.subtype || ""))) return true;
@@ -68,7 +68,7 @@ export async function readWhatsApp(op, params) {
   const clamp = (v, def, max) => Math.max(1, Math.min(Number(v) || def, max));
   const fail = (code, reason, extra) => Object.assign({ ok: false, code, reason }, extra || {});
 
-  // 信息 id 可能是物件（内存里）或字符串 "true_<对话id>_<信息id>[_<作者>]"（资料库里）
+  // A message id may be an object (in memory) or a string "true_<chatId>_<msgId>[_<author>]" (in the database)
   const keyStr = (m) => {
     const id = m?.id;
     if (!id) return null;
@@ -88,7 +88,7 @@ export async function readWhatsApp(op, params) {
   };
   const wid = (x) => (x == null ? null : typeof x === "string" ? x : x._serialized || null);
 
-  // 1. 找 WhatsApp Web 内部的集合
+  // 1. Find WhatsApp Web's internal collections
   if (typeof window.require !== "function") {
     return fail("WA_NOT_READY", "WhatsApp Web hasn't finished loading, or its internals changed (window.require not found)");
   }
@@ -107,7 +107,7 @@ export async function readWhatsApp(op, params) {
   const nameOfChat = (c) => c.formattedTitle || c.name || c.contact?.name || c.id?.user || "(no name)";
   const chatById = new Map(allChats.map((c) => [c.id?._serialized, c]));
 
-  // 联系人名字（群里谁讲的）
+  // Contact names (who spoke in a group)
   let contactName = null;
   const looksLikeMe = (n) => /^(me|you|myself|我|自己|本人)$/i.test(n.normalize("NFKC").replace(/[^\p{L}]/gu, ""));
   const senderName = (m) => {
@@ -116,7 +116,7 @@ export async function readWhatsApp(op, params) {
       contactName = new Map();
       const contacts = typeof C?.Contact?.getModelsArray === "function" ? C.Contact.getModelsArray() : [];
       for (const ct of contacts) {
-        // 只有用户自己存的联系人名字（ct.name）可信；对方自己取的名字（pushname 等）谁都可以改
+        // Only contact names the user saved (ct.name) are trusted; names people give themselves (pushname etc.) can be set to anything
         if (ct.id?._serialized && ct.name) contactName.set(ct.id._serialized, { n: ct.name, saved: true });
         else if (ct.id?._serialized && (ct.pushname || ct.verifiedName)) contactName.set(ct.id._serialized, { n: ct.pushname || ct.verifiedName, saved: false });
       }
@@ -125,7 +125,7 @@ export async function readWhatsApp(op, params) {
     const num = author ? author.split("@")[0] : "";
     const c = author && contactName.get(author);
     const n = String(c?.n || m.notifyName || m.senderObj?.pushname || "").trim().slice(0, 100);
-    // 「Me」只给用户自己。对方自己取的名字（可以取成 Me、我、或看起来像的字）一律加上号码，AI 分得出不是用户
+    // "Me" is only for the user. Self-given names (which can be Me, the Chinese for "me", or look-alikes) always get the number added, so the AI can tell they are not the user
     return !n ? num : c?.saved && !looksLikeMe(n) ? n : `${n} (+${num})`;
   };
 
@@ -133,7 +133,7 @@ export async function readWhatsApp(op, params) {
     id: keyStr(m),
     from_me: fromMeOf(m),
     sender: senderName(m),
-    sender_id: fromMeOf(m) ? undefined : (wid(m.author) || wid(m.from) || undefined), // 谁写的：号码，不能被改名冒充
+    sender_id: fromMeOf(m) ? undefined : (wid(m.author) || wid(m.from) || undefined), // who wrote it: the number, which a name change cannot fake
     time: iso(m.t),
     type: m.type || "chat",
     text: textOf(m).slice(0, 2000),
@@ -230,7 +230,7 @@ export async function readWhatsApp(op, params) {
     return null;
   };
   // Shrink a picture so it fits in one AI answer (off screen; nothing on the page changes)
-  // 解码前先看标头里的尺寸：一张很小的图可以要求几 GB 记忆体（GIF 每一格都算）。认不出尺寸就不解码
+  // Read the size in the header before decoding: a tiny file can ask for GBs of memory (every GIF frame counts). Unknown size = no decode
   const MAX_PIXELS = 40e6;
   const imageDims = (u8) => {
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -331,7 +331,7 @@ export async function readWhatsApp(op, params) {
     return out;
   };
 
-  // ---------- IndexedDB（只读） ----------
+  // ---------- IndexedDB (read-only) ----------
   let dbPromise = null;
   const openModelStorage = () => {
     if (dbPromise) return dbPromise;
@@ -340,10 +340,10 @@ export async function readWhatsApp(op, params) {
       const list = await indexedDB.databases();
       if (!list.some((d) => d.name === "model-storage")) return null;
       return await new Promise((resolve) => {
-        const r = indexedDB.open("model-storage"); // 不带版本：不升级
+        const r = indexedDB.open("model-storage"); // no version: no upgrade
         r.onsuccess = () => {
           const db = r.result;
-          db.onversionchange = () => db.close(); // WhatsApp 要升级时立刻让开
+          db.onversionchange = () => db.close(); // step aside at once when WhatsApp wants to upgrade
           resolve(db);
         };
         r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (_) {} resolve(null); };
@@ -372,14 +372,14 @@ export async function readWhatsApp(op, params) {
     if (!db || !db.objectStoreNames.contains("message")) return { available: false, msgs: [] };
     const store = db.transaction("message", "readonly").objectStore("message");
     let out = [];
-    // 快路：主键是 "true_/false_<对话id>_..." 字符串时用范围查询
+    // Fast path: use a range query when the key is a "true_/false_<chatId>_..." string
     for (const pre of ["false_" + chatId + "_", "true_" + chatId + "_"]) {
       try {
         out = out.concat(await reqP(store.getAll(IDBKeyRange.bound(pre, pre + "\uffff"))));
       } catch (_) {}
     }
     if (!out.length && allowScan && !(await fastKeysWork(db.transaction("message", "readonly").objectStore("message")))) {
-      // 慢路：逐条扫（有上限）；只有主键不是上面那种格式时才需要
+      // Slow path: scan one by one (capped); needed only when the key is not in that format
       out = await scanStore(db, (rec) => chatIdOfKey(keyStr(rec)) === chatId || wid(rec.id?.remote) === chatId, 50000, max * 5);
     }
     return { available: true, msgs: out };
@@ -390,7 +390,7 @@ export async function readWhatsApp(op, params) {
     const hits = [];
     let steps = 0;
     await new Promise((resolve) => {
-      // 从最新往旧扫（prev），先拿到较新的信息
+      // Scan newest to oldest (prev) so newer messages come first
       const cur = store.openCursor(null, "prev");
       cur.onsuccess = () => {
         const c = cur.result;
@@ -441,11 +441,11 @@ export async function readWhatsApp(op, params) {
     if (!s) return { error: fail("BAD_PARAM", "Give a chat name or chat id") };
     if (chatById.has(s)) return { chat: chatById.get(s) };
     const low = s.toLowerCase();
-    // 名字可以被别人取（群组名）：只有刚好一个对话符合时才用名字；完全同名但还有别的对话也包含这个名字 → 问清楚
+    // Others can set names (group names): use a name only if exactly one chat matches; an exact match plus other chats containing the name = ask
     const part = allChats.filter((c) => nameOfChat(c).toLowerCase().includes(low));
     if (part.length === 1) return { chat: part[0] };
     if (!part.length) return { error: fail("CHAT_NOT_FOUND", `No chat name contains \"${s}\"`) };
-    // 同名的排最前面，一定列出来（不会因为只列 15 个被挤掉）；附上号码 / 是不是联系人，方便用户分辨
+    // Exact-name matches go first and are always listed (never pushed out by the 15 limit); add number / contact status so the user can tell them apart
     const exact = part.filter((c) => nameOfChat(c).toLowerCase() === low);
     const rest = part.filter((c) => !exact.includes(c));
     const list = exact.concat(rest).slice(0, Math.max(15, exact.length));
@@ -458,7 +458,7 @@ export async function readWhatsApp(op, params) {
   };
 
   try {
-    // 现在画面上打开的是哪个对话（只读属性）
+    // Which chat is open on screen now (read-only property)
     if (op === "active_chat") {
       let a = null;
       try { a = typeof ChatCol.getActive === "function" ? ChatCol.getActive() : null; } catch (_) {}
@@ -466,7 +466,7 @@ export async function readWhatsApp(op, params) {
       return { ok: true, chat: a ? { id: a.id?._serialized, name: nameOfChat(a), is_group: isGroupChat(a) } : null };
     }
 
-    // 把名称 / id 换成确定的对话（存草稿用）
+    // Turn a name / id into one definite chat (for saving drafts)
     if (op === "resolve_chat") {
       const r = resolveChat(p.chat);
       if (r.error) return r.error;
@@ -504,7 +504,7 @@ export async function readWhatsApp(op, params) {
       const idb = await idbForChat(chatId, limit);
       const seen = new Map();
       for (const m of idb.msgs) { const k = keyStr(m); if (k) seen.set(k, m); }
-      for (const m of mem) { const k = keyStr(m); if (k) seen.set(k, m); } // 内存里的较新，覆盖
+      for (const m of mem) { const k = keyStr(m); if (k) seen.set(k, m); } // in-memory copies are newer, so they win
       const real = [...seen.values()].filter((m) => !isSystem(m)).sort((a, b) => (a.t || 0) - (b.t || 0));
       const msgs = real.slice(-limit).map(shapeMsg);
       return {
@@ -547,7 +547,7 @@ export async function readWhatsApp(op, params) {
       const limit = clamp(p.limit, 50, 200);
       const includeGroups = p.include_groups !== false;
       let rows = allChats.filter((c) => !c.archive && !isOfficial(c)).map(chatRow);
-      // 内存里没有真人信息、也没有未读的 → 去本机资料库补查最后一条
+      // No real messages and no unread ones in memory: look up the last one in the local database
       let unknown = 0;
       // Look up at most 150 chats in the local database, newest first, within ~5 s, so 500+ chats stay fast
       rows.sort(byTimeDesc);
@@ -585,7 +585,7 @@ export async function readWhatsApp(op, params) {
       };
     }
 
-    // 仪表板统计：只用内存里已载入的信息，只回数字（不回信息内容）
+    // Dashboard stats: use only messages already loaded in memory, return numbers only (no message content)
     if (op === "stats") {
       const now = Date.now() / 1000;
       const DAY = 86400;

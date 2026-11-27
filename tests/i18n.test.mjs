@@ -1,5 +1,5 @@
 // The extension's screens are in English by default, even when the browser itself is in Chinese.
-// Chinese only when the user picks 中文, or picks "Same as browser" in a Chinese browser.
+// Chinese only when the user picks the Chinese option, or picks "Same as browser" in a Chinese browser.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

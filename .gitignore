@@ -1,18 +1,18 @@
-# 插件签名私钥：绝对不进 git
+# Extension signing private keys: never commit to git
 keys/*.pem
 keys/pub.der
 
-# 打包产物
+# Build output
 dist/
 
 .DS_Store
 node_modules/
 *.log
 
-# 设计检查工具的设定
+# Settings for the design check tool
 .impeccable/
 
-# 其他常见的密钥 / 本机设定，永远不进 git
+# Other common keys / local settings: never commit to git
 .env
 .env.*
 *.key
@@ -20,7 +20,7 @@ node_modules/
 *.pfx
 .claude/settings.local.json
 
-# 内部文件：只留在这台电脑和私人仓库 whatsapp-readonly-mcp-dev，不进公开仓库
+# Internal files: kept only on this computer and in the private repo whatsapp-readonly-mcp-dev, never in the public repo
 SPEC.md
 CLAUDE.md
 HANDOFF-Testing.md

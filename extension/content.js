@@ -1,18 +1,18 @@
-// WhatsApp 页面里的「AI 草稿」预览卡。
-// - 只在你打开的对话有草稿时出现，浮在输入框上方（挂在 <body> 最后，不改 WhatsApp 自己的画面结构）
-// - 「填入输入框」：你亲手点（event.isTrusted）才把文字放进输入框；**不按发送、不按 Enter**
-//   发送由你自己按 WhatsApp 的发送键
-// - 不读、不送任何东西到外面；文字只用 textContent 显示
+// The "AI draft" preview card inside the WhatsApp page.
+// - Shows only when the open chat has a draft, floating above the message box (appended at the end of <body>, WhatsApp's own layout untouched)
+// - "Fill message box": text goes into the box only when you click it yourself (event.isTrusted); **never presses Send or Enter**
+//   You press WhatsApp's Send button yourself
+// - Reads nothing and sends nothing outside; text is shown via textContent only
 (() => {
-  // 插件更新后会再放一份进来：先把旧的那份拿掉（旧的程序也会自己停）
+  // After an extension update a new copy is injected: remove the old copy first (the old script also stops itself)
   document.querySelectorAll("[data-wa-readonly-card]").forEach((n) => n.remove());
   try { chrome.runtime.sendMessage({ type: "wa_opened" }).catch(() => {}); } catch (_) {}
 
-  // 即时索引（indexer.js，在 WhatsApp 页面里）送来的「变动」：只写有变动的对话（每个对话一个 key：c:<id>），
-  // 加上一份小的总览（wa_meta：总数、统计、等你回、最近 100 个）。都放 chrome.storage.session（只在记忆体）。
+  // "Changes" from the live index (indexer.js, in the WhatsApp page): write only changed chats (one key per chat: c:<id>),
+  // plus a small overview (wa_meta: totals, stats, awaiting reply, latest 100). All in chrome.storage.session (memory only).
   const IDX = "ab-wa-index-v2";
   let pending = null, flushTimer = null;
-  // 页面送来的东西先检查形状和大小：只收看起来像对话 id 的 key、普通资料，太大就丢掉
+  // Check shape and size of what the page sends: accept only keys that look like chat ids and plain data; drop anything too big
   const okId = (id) => typeof id === "string" && id.length <= 120 && /^[\w.@:-]+$/.test(id);
   const small = (o, max) => { try { return o && typeof o === "object" && !Array.isArray(o) && JSON.stringify(o).length <= max; } catch (_) { return false; } };
   const merge = (d) => {
@@ -49,18 +49,18 @@
     else return;
     if (!flushTimer) flushTimer = setTimeout(flush, 400);
   });
-  // 设定：超过 X 天的等待自动当作「不用回」→ 告诉索引
+  // Setting: waits older than X days count as "no reply needed"; tell the index
   const sendConfig = () => {
     try {
       chrome.storage.local.get("auto_ignore_days").then((r) => window.postMessage({ __ab: IDX, want: "config", autoIgnoreDays: Number(r.auto_ignore_days) || 0 }, location.origin)).catch(() => {});
     } catch (_) {}
   };
   sendConfig();
-  setTimeout(sendConfig, 3000); // 索引可能比这里晚载入
+  setTimeout(sendConfig, 3000); // the index may load later than this script
   try { chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.auto_ignore_days) sendConfig(); }); } catch (_) {}
-  // 插件重新载入后，存的那份可能没了：请索引全部重送一次
+  // After an extension reload the stored copy may be gone: ask the index to resend everything
   try { chrome.storage.session.get("wa_meta").then((r) => { if (!r.wa_meta) window.postMessage({ __ab: IDX, want: "all" }, location.origin); }).catch(() => {}); } catch (_) {}
-  // 弹窗刚打开：叫索引马上更新一次
+  // Popup just opened: ask the index to update right away
   try {
     chrome.runtime.onMessage.addListener((m, sender) => {
       if (sender.id === chrome.runtime.id && m?.type === "wa_refresh_index") window.postMessage({ __ab: IDX, want: "now" }, location.origin);
@@ -96,7 +96,7 @@ button.primary { background:var(--primary); border-color:var(--primary); color:v
 button.primary:hover { filter:brightness(1.06); }
 button.ghost { border-color:transparent; background:transparent; color:var(--muted); }
 .msg { font-size:12px; color:var(--muted); margin-left:4px; }
-/* 收起时：黄色长条贴在输入框正上方，跟输入区一样宽；点任何地方（或「查看」）打开 */
+/* Collapsed: a yellow bar right above the message box, same width as the input area; click anywhere (or "View") to open */
 .bar { width:100%; display:flex; align-items:center; gap:8px; min-height:36px; padding:8px 16px; border:0; border-radius:10px 10px 0 0;
   background:var(--primary); color:#221b10; font-size:13px; text-align:left; cursor:pointer; box-shadow:0 -2px 10px rgba(0,0,0,.08); }
 .bar:hover { filter:brightness(1.04); border-color:transparent; }
@@ -106,7 +106,7 @@ button.ghost { border-color:transparent; background:transparent; color:var(--mut
 .bar .ok { background:#221b10; color:#f5c83b; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; white-space:nowrap; }
 svg { width:14px; height:14px; flex:none; }
 [hidden] { display:none !important; }
-/* 对话里的「不用回」小按钮：在对话标题下方靠右 */
+/* The small "No reply needed" button in a chat: below the chat title, on the right */
 .nr { position: fixed; display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 12px; border-radius: 18px;
   background: #ffffff; border: 1px solid #d1d7db; box-shadow: 0 1px 3px rgba(11,20,26,.12);
   font: 13px/1.3 "Segoe UI", "Helvetica Neue", Helvetica, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #3b4a54; }
@@ -148,7 +148,7 @@ svg { width:14px; height:14px; flex:none; }
   const $ = (id) => root.getElementById(id);
   const wrap = root.querySelector(".wrap");
   const card = root.querySelector(".card");
-  let current = null;      // 现在显示的草稿
+  let current = null;      // draft shown now
   let collapsed = false;
   let confirmReplace = false;
   let lastHeader = "";
@@ -164,8 +164,8 @@ svg { width:14px; height:14px; flex:none; }
     return Math.floor(s / 86400) + tr(" 天前", " days ago");
   }
 
-  // 卡片浮在输入框上方。为了不盖住最新的信息：在 WhatsApp 的信息卷动区底部留出跟卡片一样高的空位，
-  // 原本在最底下就跟着卷到底。卡片收起 / 换对话 / 插件重新载入时，把原本的 padding 还回去。只改样式，不动 WhatsApp 的内容。
+  // The card floats above the message box. To avoid covering the newest messages, add space as tall as the card at the bottom of WhatsApp's message scroll area,
+  // and if it was at the bottom, scroll to the bottom. On collapse / chat change / extension reload, restore the original padding. Style only, WhatsApp content untouched.
   let padEl = null, padOrig = "", padBase = 0, padNow = 0;
   function messageScroller() {
     if (padEl && padEl.isConnected) return padEl;
@@ -202,7 +202,7 @@ svg { width:14px; height:14px; flex:none; }
       (!document.body.classList.length && matchMedia("(prefers-color-scheme: dark)").matches));
     wrap.style.left = r.left + 12 + "px";
     wrap.style.width = Math.max(240, r.width - 24) + "px";
-    // 收起：黄色长条直接贴在输入框上面；打开：卡片离输入框 8px
+    // Collapsed: yellow bar sits right on the message box; open: card is 8px above it
     wrap.style.bottom = window.innerHeight - r.top + (collapsed ? 0 : 8) + "px";
     card.hidden = collapsed;
     $("expand").hidden = !collapsed;
@@ -212,7 +212,7 @@ svg { width:14px; height:14px; flex:none; }
 
   function show(d) {
     if (!d) { current = null; place(); return; }
-    if (!current || current.id !== d.id) { collapsed = true; confirmReplace = false; $("msg").textContent = ""; } // 新草稿先以黄色长条出现，点「查看」打开
+    if (!current || current.id !== d.id) { collapsed = true; confirmReplace = false; $("msg").textContent = ""; } // a new draft first shows as the yellow bar; click "View" to open
     current = d;
     $("text").textContent = d.text;
     const filled = d.status === "inserted";
@@ -220,14 +220,14 @@ svg { width:14px; height:14px; flex:none; }
     $("barOk").hidden = !filled;
     $("barText").textContent = filled ? tr("· 看一下，再自己按发送", "· check it, then press send yourself") : "· " + d.text.split("\n")[0];
     const st = d.status === "inserted" ? tr(" · 已填入", " · filled in") : d.status === "copied" ? tr(" · 已复制", " · copied") : "";
-    $("meta").textContent = (d.chat_name ? tr("给 ", "For ") + d.chat_name + " · " : "") + ago(d.created_at) + st; // 看得到这份草稿是给谁的
+    $("meta").textContent = (d.chat_name ? tr("给 ", "For ") + d.chat_name + " · " : "") + ago(d.created_at) + st; // shows who this draft is for
     $("fillLabel").textContent = confirmReplace ? tr("替换输入框里的字？再点一次", "Replace the text in the box? Click again") : tr("填入输入框", "Fill in");
     place();
   }
 
-  // 只显示「现在打开的这个对话」的草稿：每次问都编号，过时的回覆（问的时候是别的对话）丢掉
+  // Show only the draft for the chat open now: number each ask, drop stale replies (asked while another chat was open)
   let seq = 0;
-  // 对话的名字（不是整个标头：标头里还有「在线上」「输入中…」，会一直变）
+  // The chat name (not the whole header: it also holds "online" / "typing...", which keep changing)
   const headerText = () => {
     const h = document.querySelector("#main header");
     if (!h) return "";
@@ -237,18 +237,18 @@ svg { width:14px; height:14px; flex:none; }
   async function refresh() {
     const my = ++seq, hdr = headerText();
     let r = null;
-    if (!chrome.runtime?.id) { show(null); return; } // 插件重新载入过：旧卡片收起来
+    if (!chrome.runtime?.id) { show(null); return; } // extension was reloaded: hide the old card
     try { r = await chrome.runtime.sendMessage({ type: "card_drafts" }); } catch (_) { if (my === seq) show(null); return; }
-    if (my !== seq || hdr !== headerText()) return; // 等回覆的时候换过对话
+    if (my !== seq || hdr !== headerText()) return; // chat changed while waiting for the reply
     const d = r?.drafts?.[0] || null;
     show(d && r?.chat?.id && d.chat_id === r.chat.id ? d : null);
     activeChatId = r?.chat?.id || null;
     renderNoReply();
   }
 
-  // ---------- 对话里的「不用回」按钮 ----------
-  // 打开的对话如果在「等你回」：显示「不用回」；按了之后显示「已标为不用回 · 复原」。
-  // 对方再传新信息就会自动回到「等你回」（记录的是对方最后一条信息的时间）。
+  // ---------- The "No reply needed" button in a chat ----------
+  // If the open chat is "awaiting your reply": show "No reply needed"; once pressed, show "Marked no reply needed · Undo".
+  // A new message from them puts it back to "awaiting your reply" (the time of their last message is stored).
   let activeChatId = null, nrRow = null;
   async function renderNoReply() {
     const box = $("nr");
@@ -296,7 +296,7 @@ svg { width:14px; height:14px; flex:none; }
 
   const mark = (status, d = current) => { try { if (d) chrome.runtime.sendMessage({ type: "card_mark", id: d.id, status }).catch(() => {}); } catch (_) {} };
 
-  // 把草稿放进输入框：模拟「贴上」，不模拟任何按键，不按发送
+  // Put the draft into the message box: simulate a paste, no key presses, no Send
   function fillComposer(text) {
     const box = composer();
     if (!box) return false;
@@ -317,12 +317,12 @@ svg { width:14px; height:14px; flex:none; }
   }
 
   $("fill").addEventListener("click", async (e) => {
-    if (!e.isTrusted || !current) return; // 只认真人点击
-    // 按下去的那一刻再确认：打开的对话就是这份草稿的对话，不然不填（换了对话还没更新的卡片）
+    if (!e.isTrusted || !current) return; // real human clicks only
+    // Re-check at the moment of the click: the open chat must be this draft's chat, else do not fill (card not yet updated after a chat change)
     const want = current;
     let a = null;
     try { a = await chrome.runtime.sendMessage({ type: "card_active_chat" }); } catch (_) {}
-    // 以 WhatsApp 自己说的「现在打开的对话」为准（卡片在等待时被收起来也没关系）
+    // Trust WhatsApp's own "chat open now" (fine even if the card was hidden while waiting)
     if (!a?.chat?.id || a.chat.id !== want.chat_id) {
       $("msg").textContent = tr("对话换了，这份草稿不是给这个对话的。", "The chat changed; this draft is not for this chat.");
       confirmReplace = false; show(null); refresh(); return;
@@ -336,7 +336,7 @@ svg { width:14px; height:14px; flex:none; }
       mark("inserted", want);
       $("msg").textContent = tr("✓ 已填入。看一下、改一改，再自己按发送。", "✓ Filled in. Check it, edit if needed, then press send yourself.");
       want.status = "inserted";
-      collapsed = true; // 填好了就收起卡片，不挡住对话；要再看按小按钮
+      collapsed = true; // once filled, collapse the card so it does not block the chat; press the small button to see it again
       show(want);
     }
   });
@@ -350,9 +350,9 @@ svg { width:14px; height:14px; flex:none; }
     mark("dismissed");
     show(null);
   });
-  // 「在 WhatsApp 打开」链接（https://web.whatsapp.com/#ai-draft=<草稿 id>）：用户点了 AI 给的链接，
-  // 背景程序打开那个对话后叫这里把草稿填进输入框。草稿 id 是随机的，别的网站猜不到。
-  // 只填入、不发送；输入框里已经有字就不覆盖。
+  // "Open in WhatsApp" link (https://web.whatsapp.com/#ai-draft=<draft id>): the user clicked the link the AI gave,
+  // the background script opens that chat, then asks this script to fill the draft into the box. Draft ids are random, so other sites cannot guess them.
+  // Fill only, never send; do not overwrite text already in the box.
   async function fillFromLink(id) {
     for (let i = 0; i < 24; i++) {
       await new Promise((r) => setTimeout(r, 500));
@@ -370,16 +370,16 @@ svg { width:14px; height:14px; flex:none; }
   $("collapse").addEventListener("click", (e) => { if (e.isTrusted) { collapsed = true; place(); } });
   $("expand").addEventListener("click", (e) => { if (e.isTrusted) { collapsed = false; place(); } });
 
-  // 换对话 → 重新问；草稿清单变了 → 重新问；每 15 秒保底一次
+  // Ask again on chat change or draft list change; also every 15 s as a fallback
   let lastAsk = 0;
   const tick = setInterval(() => {
-    // 插件被重新载入了：这一份收起来，新的那份会接手
+    // Extension was reloaded: hide this copy, the new copy takes over
     if (!chrome.runtime?.id) { clearInterval(tick); reserve(0); host.remove(); return; }
     if (document.hidden) return;
     const h = headerText();
     const changed = h !== lastHeader;
     lastHeader = h;
-    if (changed) { seq++; confirmReplace = false; show(null); } // 换对话：先把旧卡片收起来
+    if (changed) { seq++; confirmReplace = false; show(null); } // chat changed: hide the old card first
     if (changed || Date.now() - lastAsk > 15000) { lastAsk = Date.now(); h ? refresh() : (show(null), (activeChatId = null), renderNoReply()); }
     else place();
   }, 1200);

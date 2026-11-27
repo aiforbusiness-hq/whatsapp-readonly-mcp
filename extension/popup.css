@@ -1,12 +1,12 @@
-/* AI for Business 主题（aiclassmalaysia.com）：米色底、墨色字、黄色重点、方角。
-   字体用系统已有的（不载入网络字体，插件不连外网） */
+/* AI for Business theme (aiclassmalaysia.com): beige background, ink text, yellow accents, square corners.
+   System fonts only (no web fonts loaded; the extension never goes online) */
 :root {
   --bg: #faf5ee;
   --surface: #f2ebdf;
   --fg: #221b10;
   --muted: #6b6253;
   --line: #e4dacb;
-  --primary: #f5c83b;      /* 黄色：填色、底线 */
+  --primary: #f5c83b;      /* Yellow: fills, underlines */
   --on-primary: #221b10;
   --primary-soft: #fbe9ae;
   --ink: #221b10;
@@ -63,7 +63,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 [hidden] { display: none !important; }
 
-/* 顶部 */
+/* Top */
 .top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .logo { width: 28px; height: 28px; display: block; }
@@ -86,7 +86,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .icon-btn:hover { border-color: var(--fg); color: var(--fg); }
 
-/* 配对 */
+/* Pairing */
 .pair { margin: 0 14px 10px; padding: 10px 12px; border-radius: var(--radius); background: var(--primary-soft); border-left: 3px solid var(--primary); }
 .pair-label { font-weight: 600; font-size: 12px; display: block; margin-bottom: 6px; }
 .pair-row { display: flex; gap: 6px; }
@@ -97,7 +97,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hint { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
 .hint:empty { display: none; }
 
-/* 分页 */
+/* Tabs */
 .tabs { display: flex; gap: 4px; padding: 0 14px; border-bottom: 1px solid var(--line); }
 .tab {
   border: 0; background: transparent; padding: 8px 10px 9px; color: var(--muted); font-weight: 600;
@@ -110,7 +110,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tab[data-tab="waiting"] .count { background: var(--wait-soft); color: var(--wait); }
 .tab[data-tab="drafts"] .count { background: var(--ink); color: var(--on-ink); }
 
-/* 搜索 */
+/* Search */
 .search { display: flex; align-items: center; gap: 8px; margin: 10px 14px 6px; padding: 0 10px;
   border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); }
 .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; color: var(--fg); padding: 7px 0; }
@@ -120,7 +120,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .status:empty { display: none; }
 .status.err { padding: 8px 10px; border-radius: var(--radius); background: var(--err-soft); color: var(--err); }
 
-/* 列表 */
+/* List */
 .list { list-style: none; margin: 0; padding: 0 0 4px; overflow-y: auto; flex: 1; min-height: 120px; }
 .item { padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .item:last-child { border-bottom: 0; }
@@ -158,7 +158,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .empty strong { display: block; color: var(--fg); margin-bottom: 4px; }
 .feedback { font-size: 11px; color: var(--muted); align-self: center; }
 
-/* 底部 */
+/* Bottom */
 .foot { background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 8px 14px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .link { border: 0; background: transparent; color: var(--err); font-size: 11px; font-weight: 600; padding: 4px 0; }

@@ -21,7 +21,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Secure & private](#-secure--private-by-design) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
+[Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Secure & private](#-secure--private-by-design) · [FAQ](#faq) · [Privacy](PRIVACY.md) · [Security policy](SECURITY.md) · [Disclaimer](#disclaimer) · [Development](docs/DEVELOPMENT.md)
 
 ---
 
@@ -54,7 +54,7 @@ Most WhatsApp MCP servers log in as a new linked device and include a "send mess
 - **No outside network.** No analytics, update checks, remote code or web fonts. The only outside request is `download_media` fetching one file from WhatsApp's own media server.
 - **You can wipe it.** The dashboard's **My data** page shows everything stored and clears it, after a confirmation.
 
-Full design notes (Chinese): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+Full design notes: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## What you can ask
 
@@ -126,7 +126,7 @@ codex plugin add aiforbusiness-chat-assistant@aiforbusiness
 
 Ask your AI: "What's my WhatsApp status?" It shows a 6-digit code such as `123 456`. Click the extension icon in Chrome and type the code within 3 minutes. You only do this once.
 
-Step-by-step guide for students (Chinese): [`docs/安装说明.md`](docs/安装说明.md)
+Step-by-step guide with troubleshooting: [`docs/INSTALL.md`](docs/INSTALL.md)
 
 ## MCP tools
 
@@ -195,18 +195,4 @@ No. It reads the normal WhatsApp Web you already use. No API key, no Meta develo
 ## License
 
 [MIT](LICENSE) © 2026 AI for Business
-
----
-
-## 中文说明
-
-**WhatsApp Readonly MCP**（商店名称：AI for Business Chat Assistant）让 Claude、ChatGPT 或 Codex 读你电脑上已经开着的 WhatsApp Web：谁在等你回、群里讲了什么、帮你起草回复。
-
-- **绝不发送**：程序里没有发送、标已读、删除的功能；草稿由你自己按发送。
-- **资料只在你的电脑**：不经过我们的服务器（我们没有服务器），没有统计、没有广告。
-- **非官方**：跟 WhatsApp / Meta 没有关系。建议先用副号试。
-
-**免责声明：** 使用风险自负，我们不对任何损失负责。本插件仅供研究和学习用途，不作商业用途。商业用途请使用 WhatsApp 官方 API（WABA）或其他第三方 WhatsApp API 服务商。
-
-安装步骤：[`docs/安装说明.md`](docs/安装说明.md) · 技术说明：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 

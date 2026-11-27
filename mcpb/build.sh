@@ -1,6 +1,6 @@
 #!/bin/sh
-# 打包 Claude Desktop 扩展：dist/aiforbusiness-chat-assistant.mcpb（就是一个 zip，根目录放 manifest.json）
-# 不下载任何东西；只用系统自带的 zip。
+# Builds the Claude Desktop extension: dist/aiforbusiness-chat-assistant.mcpb (just a zip with manifest.json at the root)
+# Downloads nothing; uses only the system's built-in zip.
 set -eu
 cd "$(dirname "$0")/.."
 OUT="dist/aiforbusiness-chat-assistant.mcpb"
@@ -14,5 +14,5 @@ cp plugins/aiforbusiness-chat-assistant/server/server.js plugins/aiforbusiness-c
 cp plugins/aiforbusiness-chat-assistant/server/lib/*.js "$STAGE/server/lib/"
 [ -f "$OUT" ] && rm "$OUT"
 (cd "$STAGE" && zip -qrX "../aiforbusiness-chat-assistant.mcpb" .)
-echo "已打包：$OUT"
+echo "Built: $OUT"
 unzip -l "$OUT"

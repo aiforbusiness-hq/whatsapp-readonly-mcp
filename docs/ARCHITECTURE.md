@@ -1,99 +1,99 @@
 # AI for Business Chat Assistant
 
-Chrome 插件 + 本机 MCP 程序：让 Claude（桌面版 / Claude Code）或 ChatGPT（桌面版 / Codex）读你自己开着的 **WhatsApp Web**，找出谁在等你回、整理群聊、起草回复。**程序永远不发信息**，发送由人按。
+A Chrome extension + a local MCP program. It lets Claude (Desktop / Claude Code) or ChatGPT (Desktop / Codex) read your own open **WhatsApp Web**. It finds who is waiting for your reply, sums up group chats and drafts replies. **The program never sends messages.** A person presses send.
 
-学员安装：[`docs/安装说明.md`](docs/安装说明.md) · 隐私政策：[`PRIVACY.md`](PRIVACY.md) · 商店资料：[`docs/store-listing.md`](docs/store-listing.md)
+Student install guide: [`docs/INSTALL.md`](INSTALL.md) · Privacy policy: [`PRIVACY.md`](../PRIVACY.md) · Store listing: [`docs/store-listing.md`](store-listing.md)
 
-> 非官方工具：跟 WhatsApp / Meta 没有关系，也没有得到他们的认可。「WhatsApp」只用来说明它配合哪个网站使用。
+> Unofficial tool: it is not affiliated with, or endorsed by, WhatsApp / Meta. "WhatsApp" is used only to say which website it works with.
 
-## 架构
+## Architecture
 
 ```
-Claude / ChatGPT ──stdio(MCP)──▶ plugins/aiforbusiness-chat-assistant/server/server.js ──ws://127.0.0.1:47821-47830──▶ Chrome 插件 ──▶ web.whatsapp.com
+Claude / ChatGPT ──stdio(MCP)──▶ plugins/aiforbusiness-chat-assistant/server/server.js ──ws://127.0.0.1:47821-47830──▶ Chrome extension ──▶ web.whatsapp.com
 ```
 
-每个 AI 对话都会启动一份 server.js，数量没有上限：第一份占端口、连插件（主），其他的经过它（从）；主的关了，由一份从的接手，从第一个端口开始占（`lib/hub.js`）。同时只会有一份主：主的太慢没回应时，新的会等，不会另开一份；万一出现两份，端口号较大的那份会自己退下、并过去。
+Each AI conversation starts its own copy of server.js, with no limit on how many. The first copy takes a port and connects to the extension (the main copy). The others go through it (secondary copies). If the main copy closes, a secondary copy takes over, trying ports from the first one up (`lib/hub.js`). There is only ever one main copy at a time. If the main copy is slow to answer, a new copy waits and does not start a second main. If two main copies ever appear, the one on the higher port steps down and joins the other.
 
-- `extension/` Chrome 插件（MV3）。固定 ID `hmajmekaiaiilhneebgbnchonfkblndb`（manifest 的 `key`）
-  - `indexer.js` 即时索引（MAIN world，常驻）：工作量只跟「有变动的对话」有关，跟对话总数无关
-    - 每个对话一份摘要，只有变动时才重算（用 WhatsApp 自己的变动事件；每分钟一次签名比对当保险）
-    - 总数、未读、每日 / 每小时信息数用累计值：对话变动时减掉旧的、加上新的；等你回的清单按等待时间排好（二分搜寻插入）
-    - 回覆时间、最活跃对话这类慢变的统计最多每分钟算一次
-    - 只把变动送出去：`content.js` 写进 `chrome.storage.session`（只在记忆体）：每个对话一个 key `c:<id>`（全部对话，不设上限）+ 固定大小的总览 `wa_meta`（总数、统计、等最久的 100 人、最近 100 个对话）
-    - 弹窗 / 仪表板 / AI 打开时只读 `wa_meta`；要「显示全部」、搜寻或筛选时才读全部 `c:*`
-    - 实测（假资料）：一个对话变动的处理时间 500 / 5000 / 20000 个对话都约 2 ms；`wa_meta` 都约 80 KB
-  - `reader.js` 只读读取器（MAIN world，按需注入）：读某个对话的信息、搜索等；`WAWebCollections` + IndexedDB `model-storage`（readonly）
-  - `actions.js` 唯一的画面动作：打开对话（只接受弹窗里真人点击）
-  - `content.js` WhatsApp 页面里的 AI 草稿预览卡（closed shadow DOM，浮在输入框上方；「填入输入框」= 贴上文字，不按发送）
-  - `drafts.js` 草稿清单（`chrome.storage.local`，90 天）
-  - `activity.js` AI 活动纪录（每次 MCP 请求：时间、哪个 AI、指令、数量；不存信息内容；90 天 / 1000 条）
-  - `sidebar.js` WhatsApp 左边侧栏的「AI」图示 → 整页仪表板（iframe 嵌插件页面，`use_dynamic_url`）
-  - `dashboard.html/js/css` 仪表板：概览统计、AI 活动纪录、草稿 vs 实际、数据安全图、导出（CSV / JSON，存在本机）
-  - `background.js` 连本机程序、配对、转送指令
-- `plugins/aiforbusiness-chat-assistant/` Claude Code / ChatGPT（Codex）插件：只有插件设定、图示和 `server/`（本机 MCP 程序，**零外部套件**：手写 MCP stdio + 最小 WebSocket 服务器）
-- `.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 插件市场（指向上面的插件文件夹）
-- `mcpb/` Claude 桌面版扩展（.mcpb）设定
-- `scripts/build-release.sh` 打包给学员的 zip
+- `extension/` Chrome extension (MV3). Fixed ID `hmajmekaiaiilhneebgbnchonfkblndb` (the `key` in the manifest)
+  - `indexer.js` live index (MAIN world, always running): the work depends only on "chats that changed", not on the total number of chats
+    - One summary per chat, recomputed only when it changes (uses WhatsApp's own change events; a signature check once a minute is the safety net)
+    - Totals, unread counts and messages per day / per hour are running totals: when a chat changes, the old values are subtracted and the new ones added. The waiting-for-reply list stays sorted by waiting time (binary-search insert)
+    - Slow-changing stats, such as reply times and most active chats, are computed at most once a minute
+    - Only changes are sent out: `content.js` writes to `chrome.storage.session` (memory only): one key `c:<id>` per chat (all chats, no limit) + a fixed-size overview `wa_meta` (totals, stats, the 100 people waiting longest, the 100 most recent chats)
+    - The popup / dashboard / AI read only `wa_meta` when they open. They read all `c:*` only for "Show all", search or filters
+    - Measured (fake data): handling one chat change takes about 2 ms with 500 / 5000 / 20000 chats; `wa_meta` is about 80 KB in each case
+  - `reader.js` read-only reader (MAIN world, injected when needed): reads a chat's messages, searches, and so on; `WAWebCollections` + IndexedDB `model-storage` (readonly)
+  - `actions.js` the only screen action: open a chat (accepts only a real person's click in the popup)
+  - `content.js` AI draft preview card inside the WhatsApp page (closed shadow DOM, floating above the message box; "Fill message box" = paste the text, does not press send)
+  - `drafts.js` draft list (`chrome.storage.local`, 90 days)
+  - `activity.js` AI activity log (each MCP request: time, which AI, command, count; no message content is stored; 90 days / 1000 entries)
+  - `sidebar.js` "AI" icon in WhatsApp's left sidebar → full-page dashboard (an iframe of the extension page, `use_dynamic_url`)
+  - `dashboard.html/js/css` dashboard: overview stats, AI activity log, drafts vs. actual replies, data safety diagram, export (CSV / JSON, saved on this computer)
+  - `background.js` connects to the local program, handles pairing, passes commands on
+- `plugins/aiforbusiness-chat-assistant/` Claude Code / ChatGPT (Codex) plugin: holds only the plugin settings, icon and `server/` (the local MCP program, **zero external packages**: hand-written MCP stdio + a minimal WebSocket server)
+- `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` plugin marketplaces (point to the plugin folder above)
+- `mcpb/` Claude Desktop extension (.mcpb) settings
+- `scripts/build-release.sh` builds the zip for students
 
-## MCP 工具
+## MCP tools
 
-| 工具 | 类型 | 做什么 |
+| Tool | Type | What it does |
 |---|---|---|
-| `get_status` | 只读 | 连线 / 配对状态；没配对时给 6 位数配对码 |
-| `list_chats` | 只读 | 列对话（未读 / 群 / 关键字） |
-| `get_messages` | 只读 | 读某个对话最近 N 条（≤100） |
-| `search_messages` | 只读 | 搜已存的信息（含图片说明、文件名、地点、联系人、投票） |
-| `get_media` | 只读 | 看一条信息里的图片 / 贴图 / 文件（只用电脑里已有的，不下载；常常只有模糊小图） |
-| `download_media` | 下载 | 下载一条信息里的图片 / 影片 / 语音 / 文件，存到「下载 / AI for Business Chat Assistant」；只有 AI 通过 MCP 叫才会做；只存查得完的类型（照片、影片、声音、文字、PDF、新版 Office），存档前逐个部分检查（`scan.js`），压缩档等其他类型一律不存；仪表板「AI 下载的文件」可以看预览 |
-| `list_awaiting_reply` | 只读 | 对方最后发、我还没回 |
-| `save_draft` | 写草稿清单 | 存一条回复草稿（不发送） |
-| `list_drafts` | 只读 | 草稿 + 时间 + 实际回复（研究比对用） |
+| `get_status` | Read-only | Connection / pairing status; gives a 6-digit pairing code when not paired |
+| `list_chats` | Read-only | Lists chats (unread / groups / keyword) |
+| `get_messages` | Read-only | Reads the last N messages of a chat (≤100) |
+| `search_messages` | Read-only | Searches stored messages (including photo captions, file names, locations, contacts, polls) |
+| `get_media` | Read-only | Looks at the photo / sticker / file in a message (uses only what is already on the computer, no download; often only a small blurry preview) |
+| `download_media` | Download | Downloads the photo / video / voice message / file in a message and saves it to "Downloads / AI for Business Chat Assistant". It runs only when the AI calls it through MCP. It saves only types that can be fully checked (photos, videos, audio, text, PDF, newer Office files). Each part is checked before saving (`scan.js`). Archives and all other types are never saved. The dashboard's "Files downloaded by AI" shows previews |
+| `list_awaiting_reply` | Read-only | The other person wrote last and I have not replied |
+| `save_draft` | Writes draft list | Saves a reply draft (does not send) |
+| `list_drafts` | Read-only | Drafts + time + the actual reply (for research comparison) |
 
-## 语言
+## Language
 
-- Chrome 插件：默认英文。用户在仪表板「设定 → 语言」选「中文」才用中文；选「跟浏览器」时，浏览器是中文（zh-*）就用中文（`extension/i18n.js` 的 `tr(中文, English)`、`localizeDOM()`；插件名称和说明在 `_locales/`）
-- AI 插件 / 本机程序（`plugins/aiforbusiness-chat-assistant`）：全部英文；AI 会用用户自己的语言回答
+- Chrome extension: English by default. It uses Chinese only when the user picks "Chinese" in the dashboard under "Settings → Language". With "Same as browser", it uses Chinese when the browser is in Chinese (zh-*) (`tr(zh, en)` and `localizeDOM()` in `extension/i18n.js`; the extension name and description are in `_locales/`)
+- AI plugin / local program (`plugins/aiforbusiness-chat-assistant`): all English; the AI answers in the user's own language
 
-## 安全设计
+## Security design
 
-- 程序里没有发送、按 Enter、标已读、删除的代码；填字和打开对话只认 `event.isTrusted` 的真人点击
-- WebSocket 只绑 `127.0.0.1`；只接受 `Origin: chrome-extension://<固定 ID>` 且 `Host: 127.0.0.1:<端口>`；6 位数配对码（SPAKE2，每次只能猜一个码；AI 给码后 3 分钟内有效、同一个码试 5 次就换、每次启动最多 12 次）→ 64 位随机密钥（`~/.whatsapp-readonly-mcp/secret`，权限 600）
-- 多份 server.js 共用连线：同一个 127.0.0.1 端口，双方用 `~/.whatsapp-readonly-mcp/hub-token`（权限 600，密钥本身不传送）互相验证；带 `Origin` 的请求（任何网页）一律拒绝；只能叫那 9 个指令；切换时读取会重试，存草稿绝不重复
-- 插件 CSP：`connect-src ws://127.0.0.1:*`；权限只有 `scripting`、`storage`、`alarms`、`downloads`、`offscreen` + `https://web.whatsapp.com/*`
-- 对外网络只有一种：AI 通过 MCP 叫 `download_media` 时，WhatsApp 分页从 WhatsApp 自己的媒体服务器拿那一个文件（SHA-256 一样才收；`downloader.js`、`media.js`）。其他零对外网络请求：没有统计、更新检查、远程程序、网络字体
+- The program has no code to send, press Enter, mark as read or delete. Filling text and opening a chat accept only real clicks with `event.isTrusted`
+- The WebSocket binds only to `127.0.0.1`. It accepts only `Origin: chrome-extension://<fixed ID>` with `Host: 127.0.0.1:<port>`. 6-digit pairing code (SPAKE2, each attempt can guess only one code; valid for 3 minutes after the AI gives it, the code changes after 5 tries, at most 12 tries per start) → 64-character random secret (`~/.whatsapp-readonly-mcp/secret`, permissions 600)
+- Several server.js copies share one connection: on the same 127.0.0.1 port, both sides check each other with `~/.whatsapp-readonly-mcp/hub-token` (permissions 600; the token itself is not sent). Any request with an `Origin` (any web page) is refused. Only those 9 commands can be called. During a handover, reads are retried and saving a draft never happens twice
+- Extension CSP: `connect-src ws://127.0.0.1:*`. The only permissions are `scripting`, `storage`, `alarms`, `downloads`, `offscreen` + `https://web.whatsapp.com/*`
+- There is only one kind of outside network request: when the AI calls `download_media` through MCP, the WhatsApp tab fetches that one file from WhatsApp's own media server (accepted only if the SHA-256 matches; `downloader.js`, `media.js`). Apart from that, zero outside network requests: no analytics, update checks, remote code or web fonts
 
-## 开发
+## Development
 
 ```
-sh extension/icons/make-icons.sh         # 用 Chrome 把 logo.svg 画成插件 / Claude 图示
-./mcpb/build.sh                           # 打包 .mcpb
-./scripts/build-release.sh                # 打包学员 zip（dist/）
-node --test tests/media.test.mjs          # 非文字信息测试（假资料 + 无画面 Chrome）
-node --test tests/scan.test.mjs            # 防恶意文件检查（假文件）
-node --test tests/rogue.test.mjs           # 本机连线：假程序拿不到密钥、做不了事（真插件程序 + 真本机程序）
-node --test tests/download.e2e.mjs        # 下载：真插件 + 测试用 Chromium + 假 WhatsApp（CHROMIUM_PATH 指定；约 1 分钟）
-node --test tests/hub.test.mjs            # 共用连线测试（用自己的端口和资料夹，不碰真的配对）；要 Node 22+
+sh extension/icons/make-icons.sh         # use Chrome to render logo.svg as the extension / Claude icons
+./mcpb/build.sh                           # build the .mcpb
+./scripts/build-release.sh                # build the student zip (dist/)
+node --test tests/media.test.mjs          # non-text message tests (fake data + headless Chrome)
+node --test tests/scan.test.mjs            # malicious file checks (fake files)
+node --test tests/rogue.test.mjs           # local connection: a fake program cannot get the secret or do anything (real extension code + real local program)
+node --test tests/download.e2e.mjs        # download: real extension + test Chromium + fake WhatsApp (set CHROMIUM_PATH; about 1 minute)
+node --test tests/hub.test.mjs            # shared connection tests (own port and folder, does not touch the real pairing); needs Node 22+
 ```
 
-插件（这个仓库 / 学员 zip 的根目录本身就是插件市场）：
+Plugins (the root of this repo / of the student zip is itself the plugin marketplace):
 
-- Claude Code：`/plugin marketplace add <文件夹或 aiforbusiness-hq/whatsapp-readonly-mcp>` → `/plugin install aiforbusiness-chat-assistant@aiforbusiness`（`plugins/aiforbusiness-chat-assistant/.claude-plugin/plugin.json`，`${CLAUDE_PLUGIN_ROOT}`）
-- ChatGPT 桌面版 / Codex：`codex plugin marketplace add <同上>` → `codex plugin add aiforbusiness-chat-assistant@aiforbusiness`（`plugins/aiforbusiness-chat-assistant/plugin.json` + `mcp.json` stdio，`${PLUGIN_ROOT}`）
-- Claude 桌面版：`dist/aiforbusiness-chat-assistant.mcpb`
+- Claude Code: `/plugin marketplace add <folder or aiforbusiness-hq/whatsapp-readonly-mcp>` → `/plugin install aiforbusiness-chat-assistant@aiforbusiness` (`plugins/aiforbusiness-chat-assistant/.claude-plugin/plugin.json`, `${CLAUDE_PLUGIN_ROOT}`)
+- ChatGPT Desktop / Codex: `codex plugin marketplace add <same as above>` → `codex plugin add aiforbusiness-chat-assistant@aiforbusiness` (`plugins/aiforbusiness-chat-assistant/plugin.json` + `mcp.json` stdio, `${PLUGIN_ROOT}`)
+- Claude Desktop: `dist/aiforbusiness-chat-assistant.mcpb`
 
-## 文件
+## Files
 
-- `docs/安装说明.md` 学员安装说明；`docs/store-listing.md` 商店资料；`PRIVACY.md` 隐私政策
-- `keys/` 插件签名私钥（`*.pem`）**不进 git**（只有 Xun 有；打包 .crx 才需要）；git 里只有公钥 `pub.b64` 和插件 ID
+- `docs/INSTALL.md` student install guide; `docs/store-listing.md` store listing; `PRIVACY.md` privacy policy
+- `keys/` extension signing private key (`*.pem`) is **never committed to git** (only Xun has it; needed only to build a .crx); git holds only the public key `pub.b64` and the extension ID
 
-## 状态 / 已知限制
+## Status / known limits
 
-- 连线状态四种，仪表板 / 弹窗一致：已连上、要配对（可直接在仪表板输入配对码）、还没连上过（显示设定步骤）、AI 没开（配对过，打开 AI 自动连上）；插件重新载入后旧页面会提示重新整理
-- 「不用回」清单（`chrome.storage.local` 的 `ignored_waiting`）同时作用在仪表板、弹窗和 MCP `list_awaiting_reply`（`include_ignored: true` 可看全部）
-- 仪表板的统计只算 WhatsApp Web 已载入电脑的信息；「对话时间线」导出按时间排序，可选是否放入 AI 草稿（放在草稿建立的时间点）
-- Mac 测过读取、配对、Claude Code、Claude 桌面版；**Windows、ChatGPT 桌面版、「打开对话」、「填入输入框」还没实测**
-- 每个对话只读得到 WhatsApp Web 已存在电脑里的信息
-- 非官方读法：WhatsApp 改版可能失效；有账号被限制的风险
-- 图示右下角有 WhatsApp 样式标志，只适合私下发给学员；上架 Chrome 网上应用店要拿掉
+- Four connection states, the same in the dashboard and popup: connected, needs pairing (the pairing code can be entered right in the dashboard), never connected yet (shows setup steps), AI not open (paired before; opening the AI connects automatically). After the extension reloads, old pages show a prompt to refresh
+- The "No reply needed" list (`ignored_waiting` in `chrome.storage.local`) applies to the dashboard, the popup and MCP `list_awaiting_reply` (`include_ignored: true` shows all)
+- Dashboard stats count only messages WhatsApp Web has already loaded onto the computer. The "Chat timeline" export is sorted by time and can optionally include AI drafts (placed at the time each draft was created)
+- Tested on Mac: reading, pairing, Claude Code, Claude Desktop. **Not yet tested: Windows, ChatGPT Desktop, "Open chat", "Fill message box"**
+- For each chat, only the messages WhatsApp Web has already stored on the computer can be read
+- Unofficial reading method: it may break when WhatsApp changes; there is a risk of account restriction
+- The icon has a WhatsApp-style mark in the bottom-right corner. It is only fit for private sharing with students and must be removed before listing on the Chrome Web Store
 
-© AI for Business（aiclassmalaysia.com）。保留所有权利，仅供学员使用。
+© AI for Business (aiclassmalaysia.com). All rights reserved. For students only.

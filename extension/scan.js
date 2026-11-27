@@ -1,15 +1,15 @@
-// 防恶意文件：看文件「真正的内容」，不信对方取的名字或 WhatsApp 写的类型。
+// Malicious file guard: look at the file's real content, not the sender's file name or the type WhatsApp reports.
 //
-// 原则：白名单。AI 只代为存下「看得完、查得完」的文件：
-//   照片（JPEG / PNG / GIF / WebP / BMP / HEIC / AVIF）、影片、声音 / 语音、纯文字（TXT / CSV / JSON / XML…）、
-//   PDF（解开所有压缩流检查）、新版 Office（DOCX / XLSX / PPTX / ODF，逐个部分解开检查）。
-// 其他一律不存（压缩档、旧版 Office、RTF、SVG、网页、程序、认不出的格式），请用户自己在 WhatsApp 里判断。
-// 任何一项检查做不完（加密、太大、不认识的压缩方式），也不存：宁可错杀。
+// Rule: allowlist. The AI only saves files that can be fully read and fully checked:
+//   photos (JPEG / PNG / GIF / WebP / BMP / HEIC / AVIF), video, audio / voice, plain text (TXT / CSV / JSON / XML...),
+//   PDF (every compressed stream unpacked and checked), modern Office (DOCX / XLSX / PPTX / ODF, each part unpacked and checked).
+// Everything else is never saved (archives, old Office, RTF, SVG, web pages, programs, unknown formats); the user judges those in WhatsApp.
+// If any check cannot finish (encrypted, too big, unknown compression), the file is not saved either: better safe than sorry.
 //
-// media.js 一边接收文件片段一边检查（scanner().push），最后 finish()；PDF 和 Office 再用 deepCheck() 解开检查。
-// 纯函数，不用 chrome.*，方便测试。Chrome 自己的安全检查和电脑的防毒仍然是最后一道；仪表板永远不提供「打开」按钮。
+// media.js checks file chunks as they arrive (scanner().push), then calls finish(); PDF and Office are then unpacked by deepCheck().
+// Pure functions, no chrome.*, easy to test. Chrome's own checks and the computer's antivirus stay the last line; the dashboard never offers an "Open" button.
 
-// 程式 / 脚本 / 网页 / 会执行程序码的格式：看名字就拒绝（每一段路径都看）
+// Programs / scripts / web pages / formats that run code: refuse by name alone (every path segment is checked)
 export const PROGRAM = /\.(exe|msi|msix|msixbundle|appx|appxbundle|com|scr|pif|bat|cmd|ps1|psm1|vbs|vbe|js|jse|mjs|cjs|wsf|wsh|hta|reg|lnk|url|cpl|inf|sys|dll|ocx|jar|class|app|dmg|pkg|mpkg|command|tool|sh|bash|zsh|csh|ksh|fish|py|pyc|pyw|rb|pl|php|scpt|scptd|applescript|workflow|terminal|webloc|inetloc|fileloc|mobileconfig|iso|img|vhd|vhdx|apk|xapk|apks|aab|ipa|appimage|deb|rpm|desktop|xll|docm|xlsm|xlsb|pptm|dotm|xltm|potm|ppam|xlam|sldm|chm|html?|xhtml?|shtml|mht|mhtml|svgz?|xht|settingcontent-ms|library-ms|search-ms|searchconnector-ms|gadget|msc|msp|msu|mst|scf|application|appref-ms|xbap|vsto|ws|rdp|diagcab|one|onepkg|jnlp|iqy|slk|wsc|sct|vb|vba|ps1xml|psc1|psd1|msh|msh1|msh2|mshxml|website|appinstaller|accdb|accde|accdr|accdt|mdb|mde|ade|adp|mda|mdz|theme|themepack|deskthemepack|xlm|hlp|shs|shb|elf|run|out|so|dylib|kext|plugin|prefpane|saver|widget|bundle|framework|action|osax)$/i;
 export const isProgramName = (n) => String(n || "").split(/[/\\]/).some((seg) => PROGRAM.test(seg.replace(/[\s.\u0000]+$/, "")));
 
@@ -35,7 +35,7 @@ export function expectedFamily(name, mime) {
   for (const [f, re] of Object.entries(EXT_FAMILY)) if (re.test(name || "")) return f;
   return /\.[A-Za-z0-9]{1,8}$/.test(name || "") ? "other" : MIME_FAMILY(String(mime || "").toLowerCase());
 }
-// 白名单：可以存的真正类型，和名字没有对的副档名时补上的副档名
+// Allowlist: real types that may be saved, and the extension to add when the name lacks the right one
 const ALLOWED = { jpeg: "jpg", png: "png", gif: "gif", webp: "webp", bmp: "bmp", avif: "avif", heic: "heic", video: "mp4", audio: "m4a", pdf: "pdf", office: null, text: "txt", xml: "xml" };
 const EXT_OK = { jpeg: /\.(jpe?g|jfif)$/i, png: /\.png$/i, gif: /\.gif$/i, webp: /\.webp$/i, bmp: /\.bmp$/i, avif: /\.avif$/i, heic: /\.(heic|heif)$/i,
   video: /\.(mp4|m4v|3gp|3gpp|mov|webm|mkv)$/i, audio: /\.(ogg|oga|opus|mp3|m4a|aac|amr|wav|flac|mp4)$/i, pdf: /\.pdf$/i,
@@ -43,17 +43,17 @@ const EXT_OK = { jpeg: /\.(jpe?g|jfif)$/i, png: /\.png$/i, gif: /\.gif$/i, webp:
 
 const at = (h, sig, off = 0) => h.length >= off + sig.length && sig.every((b, i) => h[off + i] === b);
 const latin1 = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return s; };
-// 网页 / 会执行的内容（文字和 XML 整个文件都看，不只看开头）
+// Web pages / runnable content (text and XML are checked in full, not just the start)
 const ACTIVE = /<([a-z0-9_.-]+:)?(script|iframe|frame|object|embed|form|foreignobject|handler|html|body|meta|link|base)\b|javascript:|vbscript:|xmlns(:[a-z0-9_.-]+)?\s*=\s*["']?http:\/\/www\.w3\.org\/1999\/xhtml|\son[a-z]+\s*=|<\?xml-stylesheet/i;
 
-// 看开头几个 byte 认出真正的类型
+// Tell the real type from the first few bytes
 export function sniff(h) {
-  if (at(h, [0x4d, 0x5a])) return "exe";                                   // Windows 程序 (MZ)
-  if (at(h, [0x7f, 0x45, 0x4c, 0x46])) return "exe";                       // Linux 程序 (ELF)
-  if ([[0xfe, 0xed, 0xfa, 0xce], [0xfe, 0xed, 0xfa, 0xcf], [0xce, 0xfa, 0xed, 0xfe], [0xcf, 0xfa, 0xed, 0xfe], [0xca, 0xfe, 0xba, 0xbe], [0xbe, 0xba, 0xfe, 0xca]].some((s) => at(h, s))) return "exe"; // Mac 程序 / Java
+  if (at(h, [0x4d, 0x5a])) return "exe";                                   // Windows program (MZ)
+  if (at(h, [0x7f, 0x45, 0x4c, 0x46])) return "exe";                       // Linux program (ELF)
+  if ([[0xfe, 0xed, 0xfa, 0xce], [0xfe, 0xed, 0xfa, 0xcf], [0xce, 0xfa, 0xed, 0xfe], [0xcf, 0xfa, 0xed, 0xfe], [0xca, 0xfe, 0xba, 0xbe], [0xbe, 0xba, 0xfe, 0xca]].some((s) => at(h, s))) return "exe"; // Mac program / Java
   if (at(h, [0x64, 0x65, 0x78, 0x0a])) return "exe";                       // Android
-  if (at(h, [0x4c, 0, 0, 0, 0x01, 0x14, 0x02, 0])) return "exe";           // Windows 捷径 .lnk
-  if (at(h, [0x23, 0x21, 0x41, 0x4d, 0x52])) return "audio";               // #!AMR 语音
+  if (at(h, [0x4c, 0, 0, 0, 0x01, 0x14, 0x02, 0])) return "exe";           // Windows shortcut .lnk
+  if (at(h, [0x23, 0x21, 0x41, 0x4d, 0x52])) return "audio";               // #!AMR voice
   if (at(h, [0x23, 0x21])) return "script";                                // #!/bin/sh
   if (at(h, [0xff, 0xd8, 0xff])) return "jpeg";
   if (at(h, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "png";
@@ -73,8 +73,8 @@ export function sniff(h) {
   if (at(h, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])) return "ole";
   if (h.length > 262 && latin1(h.subarray(257, 262)) === "ustar") return "tar";
   const head1k = latin1(h.subarray(0, 1024));
-  if (head1k.includes("%PDF-")) return "pdf";                              // 阅读器在前 1024 bytes 找得到就会开
-  if (/^\s*\{\\rt/i.test(head1k)) return "rtf";                            // Word 接受 {\rt 开头
+  if (head1k.includes("%PDF-")) return "pdf";                              // readers open it if found in the first 1024 bytes
+  if (/^\s*\{\\rt/i.test(head1k)) return "rtf";                            // Word accepts a {\rt start
   const t = latin1(h.subarray(0, 2048)).replace(/^(\xef\xbb\xbf|\xff\xfe|\xfe\xff)/, "").replace(/\0/g, "").trimStart().toLowerCase();
   if (/^<(!doctype\s+html|html|head|body|script|iframe|meta|a\s|form|object|embed)/.test(t) || (/^</.test(t) && ACTIVE.test(t))) return "html";
   if (/^<svg/.test(t) || (/^<\?xml/.test(t) && /<svg/.test(t))) return "svg";
@@ -97,7 +97,7 @@ const B = {
   SPREADSHEET_FORMULA: ["这个表格文件（CSV）里有公式或指令（= + - @ 开头的格子），用 Excel 打开可能执行程序，所以不存。", "This spreadsheet file (CSV) has cells that start with = + - or @ (formulas or commands). Opening it in Excel can run commands, so it is not saved."],
   NOT_CHECKABLE: ["这个文件加密了、太大或太复杂，没办法完整检查，所以不存。", "This file is encrypted, too large or too complex to check fully, so it is not saved."]
 };
-// fill: { key: "same in both" } or { key: ["中文", "English"] }
+// fill: { key: "same in both" } or { key: ["Chinese text", "English text"] }
 const say = (table, code, fill = {}) => {
   const f = (s, i) => s.replace(/%(\w)/g, (_, k) => (Array.isArray(fill[k]) ? fill[k][i] : fill[k]) ?? "");
   return { code, zh: f(table[code][0], 0), en: f(table[code][1], 1) };
@@ -105,7 +105,7 @@ const say = (table, code, fill = {}) => {
 export const warning = (code) => say(W, code);
 export const block = (code, fill) => say(B, code, fill);
 
-// ZIP 的「中央目录结尾」：在文件最后 64 KB 里，而且注解长度刚好到文件结尾 → 真的有一个压缩档（可能藏在图片后面）
+// ZIP "end of central directory": in the last 64 KB, with a comment length that reaches the file end = a real archive (maybe hidden after an image)
 function hasEocd(tail) {
   for (let i = tail.length - 22; i >= 0; i--) {
     if (tail[i] === 0x50 && tail[i + 1] === 0x4b && tail[i + 2] === 0x05 && tail[i + 3] === 0x06 && i + 22 + (tail[i + 20] | (tail[i + 21] << 8)) === tail.length) return true;
@@ -113,8 +113,8 @@ function hasEocd(tail) {
   return false;
 }
 
-// 一边接收一边检查：push(每一段 Uint8Array)，最后 finish(档名, WhatsApp 写的类型)
-// CSV / TSV：Excel 会把 = + - @ 开头的格子当公式（可以叫电脑执行指令）。普通数字（-5、+60.1）不算
+// Check while receiving: push(each Uint8Array chunk), then finish(file name, type WhatsApp reports)
+// CSV / TSV: Excel treats cells starting with = + - @ as formulas (they can run commands). Plain numbers (-5, +60.1) do not count
 const FORMULA_CELL = (cell) => {
   const c = cell.replace(/^[\s"']+/, "");
   if (!/^[=+\-@\uff1d\uff0b\uff0d\uff20]/.test(c)) return false;
@@ -123,26 +123,26 @@ const FORMULA_CELL = (cell) => {
 const csvLineBad = (line) => line.split(/[,;\t]/).some(FORMULA_CELL) || /^\s*[\t\r]*[=+@]/.test(line);
 export function scanner() {
   let head = null, real = null, total = 0, active = false, formula = false, csvCarry = "";
-  const csvDec = new TextDecoder("utf-8"); // 全形的 ＝ ＋ 也要看得到
+  const csvDec = new TextDecoder("utf-8"); // full-width = and + must be seen too
   let carry = new Uint8Array(0), tail = new Uint8Array(0);
   return {
     real: () => real,
     push(u8) {
       if (!head) { head = u8.subarray(0, 4096).slice(); real = sniff(head); }
       total += u8.length;
-      // 文字 / XML：整个文件都找会执行的内容（跨两段的也看得到）
+      // Text / XML: search the whole file for runnable content (also across chunk boundaries)
       if (real === "text" || real === "xml") {
         const buf = new Uint8Array(carry.length + u8.length); buf.set(carry); buf.set(u8, carry.length);
         if (!active && ACTIVE.test(latin1(buf).replace(/\0/g, ""))) active = true;
         carry = buf.subarray(Math.max(0, buf.length - 512)).slice();
-        // 表格公式：一行一行看（最后半行留到下一段）
+        // Spreadsheet formulas: check line by line (a partial last line waits for the next chunk)
         if (!formula) {
           const lines = (csvCarry + csvDec.decode(u8, { stream: true }).replace(/\0/g, "")).split(/\r\n|\n|\r/);
           csvCarry = lines.pop().slice(-100000);
           if (lines.some(csvLineBad)) formula = true;
         }
       }
-      // 留最后 64 KB：找藏在后面的压缩档
+      // Keep the last 64 KB: look for an archive hidden at the end
       const keep = Math.min(65557, tail.length + u8.length);
       const t = new Uint8Array(keep);
       const fromNew = Math.min(u8.length, keep), fromOld = keep - fromNew;
@@ -150,21 +150,21 @@ export function scanner() {
       t.set(u8.subarray(u8.length - fromNew), fromOld);
       tail = t;
     },
-    // 程序：看到第一段就可以停，不用把整个文件接完
+    // Programs: stop at the first chunk, no need to receive the whole file
     early(name) {
       if (real === "exe" || real === "script") return block("PROGRAM_FILE");
       if (real === "html") return block("WEB_PAGE");
       return isProgramName(name) ? block("PROGRAM_FILE") : null;
     },
-    // 结果：block（不存）或可以存（saveName = 存档用的名字，副档名跟真正类型一致）；deep = 还要做哪种深入检查
+    // Result: block (do not save) or ok to save (saveName = file name to save as, extension matches the real type); deep = which deep check is still needed
     finish(name, mime) {
       if (!head) real = "unknown";
-      // 新版 Office 其实是 ZIP：名字或类型说是 Office 才当 Office（之后 deepCheck 逐个部分检查）
+      // Modern Office is really ZIP: treat as Office only if the name or type says Office (deepCheck then checks each part)
       if (real === "zip" && (EXT_OK.office.test(name || "") || /officedocument|opendocument/i.test(String(mime || "")))) real = "office";
       const warnings = [];
       let b = this.early(name);
       if (!b && active) b = block("WEB_PAGE");
-      // 会用 Excel 打开的文字表格：有公式 / 指令就不存
+      // Text tables that Excel would open: do not save if they hold formulas / commands
       const sheet = /\.(csv|tsv|tab|prn|dif|sylk)$/i.test(name || "") || /^text\/(csv|tab-separated-values)/i.test(String(mime || ""));
       if (!b && (real === "text" || real === "xml") && sheet && (formula || csvLineBad(csvCarry))) b = block("SPREADSHEET_FORMULA");
       if (!b && !(real in ALLOWED)) b = block("TYPE_NOT_ALLOWED", { t: [typeLabel(real), typeLabel(real, true)] });
@@ -175,7 +175,7 @@ export function scanner() {
         b = { code: "DISGUISED", zh: B.DISGUISED[0].replace("%e", ex[0]).replace("%r", typeLabel(real)), en: B.DISGUISED[1].replace("%e", ex[1]).replace("%r", typeLabel(real, true)) };
       }
       if (!b && real === "office" && !EXT_OK.office.test(name || "")) b = block("TYPE_NOT_ALLOWED", { t: "Office" });
-      // 名字没有对的副档名：补上（例如「报价」→「报价.pdf」），打开时用的是对的程序
+      // Name lacks the right extension: add it (e.g. "quote" becomes "quote.pdf") so the right program opens it
       let saveName = name;
       if (!b && real !== "office" && !EXT_OK[real]?.test(name || "")) saveName = (name || "file") + "." + ALLOWED[real];
       return { real, block: b, warnings, size: total, saveName, deep: !b && (real === "pdf" || real === "office") ? real : null };
@@ -183,16 +183,16 @@ export function scanner() {
   };
 }
 
-// 预览：只有真的是普通图片才可以拿来画缩图（不用 SVG：SVG 可以带程序码）
+// Preview: only real plain images may be used to draw a thumbnail (no SVG: SVG can carry code)
 export const PREVIEWABLE = new Set(["jpeg", "png", "gif", "webp", "bmp", "avif"]);
-export const DEEP_MAX = 50 * 1024 * 1024; // PDF / Office 在这个大小内才检查得完；超过就不存
+export const DEEP_MAX = 50 * 1024 * 1024; // PDF / Office can only be fully checked up to this size; larger is not saved
 
-// ---------- 深入检查：PDF ----------
-// 每一个 stream：找出它的字典（成对的 << >>，#xx 解码），依 /Filter 解开（Flate / ASCIIHex / ASCII85，串接也行，
-// PNG predictor 还原），再找危险指令。任何解不开的（LZW、RunLength、加密…）→ partial（不存）。
+// ---------- Deep check: PDF ----------
+// For each stream: find its dictionary (matched << >>, #xx decoded), unpack by /Filter (Flate / ASCIIHex / ASCII85, chained too,
+// PNG predictor undone), then look for dangerous commands. Anything that cannot be unpacked (LZW, RunLength, encryption...) = partial (not saved).
 const PDF_BAD = /\/(JavaScript|JS|Launch|EmbeddedFiles?|RichMedia|XFA|SubmitForm|ImportData|GoToE|GoToR)(?![A-Za-z0-9])/;
 const pdfNames = (t) => t.replace(/#([0-9a-fA-F]{2})/g, (_, x) => String.fromCharCode(parseInt(x, 16)));
-// lenient：资料坏在中间时，用已经解出来的部分（PDF 阅读器也是这样读，看到的就是这些），不当作看不了
+// lenient: if data breaks midway, use the part already unpacked (PDF readers do the same, so that is what they show); not treated as unreadable
 async function inflateWith(u8, cap, format = "deflate", lenient = false) {
   const ds = new DecompressionStream(format);
   const w = ds.writable.getWriter(); w.write(u8).catch(() => {}); w.close().catch(() => {});
@@ -245,34 +245,34 @@ function unPng(u8, columns, colors, bpc) {
   }
   return out;
 }
-// 从 "stream" 往前找成对的 << ... >>（字典里可以再有字典）
+// From "stream", search back for a matched << ... >> (dictionaries can nest)
 function dictBefore(s, idx) {
   let j = idx - 1;
   while (j > 0 && /\s/.test(s[j])) j--;
   if (s[j] !== ">" || s[j - 1] !== ">") return null;
   let depth = 0;
-  for (let k = j; k > Math.max(0, idx - 8192); k--) { // 字典最多看 8 KB
+  for (let k = j; k > Math.max(0, idx - 8192); k--) { // look at most 8 KB back for the dictionary
     if (s[k] === ">" && s[k - 1] === ">") { depth++; k--; continue; }
     if (s[k] === "<" && s[k - 1] === "<") { depth--; k--; if (!depth) return s.slice(k, j + 1); }
   }
   return null;
 }
-// 压缩过的二进位资料（字型、图片）偶然会出现「/JS」这种字：在资料里只认较长的名字，后面还要是 PDF 的分隔字元
+// Compressed binary data (fonts, images) can contain "/JS" by chance: inside data, only match longer names followed by a PDF delimiter
 const PDF_BAD_IN_DATA = /\/(JavaScript|Launch|EmbeddedFiles?|RichMedia|XFA|SubmitForm|ImportData|GoToE|GoToR)(?=[\s\0\f\v\/<>\[\]()%{}]|$)/;
 export async function pdfDeepCheck(u8) {
   const s = latin1(u8);
   const found = { bad: false, partial: false, why: "" };
   const partial = (why) => { found.partial = true; found.why = why; };
-  const spans = []; // stream 资料的位置；资料以外的部分（物件、字典）用完整的规则检查
+  const spans = []; // positions of stream data; everything outside it (objects, dictionaries) gets the full rules
   let budget = 64 * 1024 * 1024, count = 0;
   const re = /stream(\r\n|\n|\r)/g; let m;
   let tokens = 0;
   while ((m = re.exec(s)) && !found.bad) {
-    // 每一个「stream」字都算，避免故意塞满几百万个假的让检查卡住
+    // Count every "stream" word, so millions of fake ones cannot stall the check
     if (++tokens > 20000) { partial("too many stream markers"); break; }
     const start = m.index + m[0].length;
     const rawDict = dictBefore(s, m.index);
-    if (rawDict == null) continue; // 不是 stream 关键字（例如内容里的字）
+    if (rawDict == null) continue; // not a stream keyword (e.g. the word inside content)
     const dict = pdfNames(rawDict);
     const lenM = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict);
     let end = lenM ? start + Number(lenM[1]) : -1;
@@ -280,11 +280,11 @@ export async function pdfDeepCheck(u8) {
       end = s.indexOf("endstream", start);
       if (end < 0) { partial("stream without end"); break; }
       re.lastIndex = end + 9;
-      if (s[end - 1] === "\n") end--; // 「endstream」前面的换行不是资料
+      if (s[end - 1] === "\n") end--; // the line break before "endstream" is not data
       if (s[end - 1] === "\r") end--;
     } else re.lastIndex = end;
     spans.push([start, end]);
-    const objStm = /\/Type\s*\/ObjStm/.test(dict); // 物件串流：里面是真的物件，用完整规则
+    const objStm = /\/Type\s*\/ObjStm/.test(dict); // object stream: holds real objects, use the full rules
     const fm = /\/Filter\s*(\[[^\]]*\]|\/[A-Za-z0-9]+)/.exec(dict);
     const filters = fm ? (fm[1].match(/\/[A-Za-z0-9]+/g) || []).map((x) => x.slice(1)) : [];
     if (++count > 5000 || budget <= 0) { partial("too many streams"); break; }
@@ -295,7 +295,7 @@ export async function pdfDeepCheck(u8) {
       if (f === "FlateDecode" || f === "Fl") { const r = await inflateWith(data, Math.min(budget, 32 * 1024 * 1024), "deflate", true); if (r.over || r.bad) { partial("cannot unpack a stream"); data = null; break; } data = r.data; }
       else if (f === "ASCIIHexDecode" || f === "AHx") { data = asciiHex(data); if (!data) { partial("bad hex stream"); break; } }
       else if (f === "ASCII85Decode" || f === "A85") { data = ascii85(data); if (!data) { partial("bad ascii85 stream"); break; } }
-      else { partial("unknown filter " + f.slice(0, 20)); data = null; break; } // LZW / RunLength / Crypt / 其他：看不了
+      else { partial("unknown filter " + f.slice(0, 20)); data = null; break; } // LZW / RunLength / Crypt / others: cannot be read
     }
     if (!data) { if (found.partial) break; continue; }
     const pred = /\/Predictor\s+(\d+)/.exec(dict);
@@ -309,24 +309,24 @@ export async function pdfDeepCheck(u8) {
     if ((objStm ? PDF_BAD : PDF_BAD_IN_DATA).test(t)) { found.bad = true; found.why = "in stream"; }
     if (objStm && /\/Encrypt(?![A-Za-z0-9])/.test(t)) partial("encrypted");
   }
-  // stream 以外：物件和字典
+  // Outside streams: objects and dictionaries
   let outside = "", o = 0;
   for (const [a, b] of spans) { outside += s.slice(o, a) + " "; o = Math.max(o, b); }
   outside = pdfNames(outside + s.slice(o));
   if (PDF_BAD.test(outside)) { found.bad = true; found.why = "in objects"; }
-  // 没压缩的 stream 资料里如果出现「N N obj」，阅读器修复文件时可能当成物件来读：用完整规则检查
+  // If uncompressed stream data contains "N N obj", a reader repairing the file may read it as an object: check with the full rules
   for (const [a, b] of spans) {
     if (found.bad) break;
     const raw = pdfNames(s.slice(a, b));
     if ((/\d+\s+\d+\s+obj\b/.test(raw) ? PDF_BAD : PDF_BAD_IN_DATA).test(raw)) { found.bad = true; found.why = "in raw stream"; }
   }
-  if (/\/Encrypt(?![A-Za-z0-9])/.test(outside)) partial("encrypted"); // 加密的 PDF：里面看不到
+  if (/\/Encrypt(?![A-Za-z0-9])/.test(outside)) partial("encrypted"); // encrypted PDF: contents cannot be seen
   return found;
 }
 
-// ---------- 深入检查：新版 Office（DOCX / XLSX / PPTX / ODF 都是 ZIP） ----------
-// 照中央目录（解压程式真正用的那一份）读每个部分，解开检查：巨集、内嵌物件、ActiveX、连到外面的范本、程序文件。
-// 任何读不懂的（ZIP64、加密、奇怪的压缩方式、太多部分）→ 不存。
+// ---------- Deep check: modern Office (DOCX / XLSX / PPTX / ODF are all ZIP) ----------
+// Read each part from the central directory (the copy unzip tools really use), unpack and check: macros, embedded objects, ActiveX, external templates, program files.
+// Anything that cannot be understood (ZIP64, encryption, odd compression, too many parts) = not saved.
 const EXT_REL = /\/(oleObject|attachedTemplate|frame|subDocument|externalLinkPath|aFChunk|package)["']/i;
 export async function officeDeepCheck(u8) {
   const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -345,7 +345,7 @@ export async function officeDeepCheck(u8) {
     const flags = dv.getUint16(p + 8, true), method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
     const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
     const names = [dec.decode(u8.subarray(p + 46, p + 46 + nlen))];
-    // 额外栏位里的 Unicode 名字（0x7075），解压程式会用它
+    // Unicode name in the extra field (0x7075); unzip tools use it
     for (let x = p + 46 + nlen; x + 4 <= p + 46 + nlen + xlen;) {
       const id = dv.getUint16(x, true), sz = dv.getUint16(x + 2, true);
       if (id === 0x7075 && sz > 5) names.push(dec.decode(u8.subarray(x + 9, x + 4 + sz)));
@@ -377,18 +377,18 @@ export async function officeDeepCheck(u8) {
       if (n0 === "[content_types].xml" && /macroenabled|vbaproject|ms-office\.vbaproject|activex|macrosheet/i.test(t)) return bad("macro content type");
       for (const rel of t.match(/<Relationship\b[^>]*>/gi) || []) if (/TargetMode\s*=\s*["']External["']/i.test(rel) && EXT_REL.test(rel)) return bad("link to an outside template or object");
       if (/<script\b|xlink:href\s*=\s*["']\s*(javascript|vbscript|ms-|file):/i.test(t)) return bad("script");
-      // DDE：Word 栏位 / Excel 外部连结可以叫电脑执行指令
-      // Word 会把一个栏位拆成好几段：全部接起来再看
+      // DDE: Word fields / Excel external links can make the computer run commands
+      // Word splits one field into several pieces: join them all before checking
       const instr = [...t.matchAll(/<w:instrText\b[^>]*>([^<]*)</gi)].map((x) => x[1]).join("") + " " + [...t.matchAll(/\binstr\s*=\s*"([^"]*)"/gi)].map((x) => x[1]).join(" ");
       if (/<ddeLink\b|<oleLink\b/i.test(t) || /\b(DDE|DDEAUTO|INCLUDETEXT|INCLUDEPICTURE|IMPORT|LINK)\b/i.test(instr)) return bad("DDE or outside link field");
-      if (/<(\w+:)?f\b[^>]*>[^<]*\|/i.test(t)) return bad("DDE formula"); // Excel 公式里的「程式|指令」
+      if (/<(\w+:)?f\b[^>]*>[^<]*\|/i.test(t)) return bad("DDE formula"); // "program|command" inside an Excel formula
     }
   }
   if (!ctypes) return fail("not an Office file");
   return res;
 }
 
-// media.js 用：依 finish() 的 deep 做深入检查。回传 block 或 null
+// Used by media.js: run the deep check named by finish()'s deep. Returns block or null
 export async function deepCheck(kind, u8) {
   if (!u8 || u8.length > DEEP_MAX) return block("NOT_CHECKABLE");
   if (kind === "pdf") {
@@ -403,7 +403,7 @@ export async function deepCheck(kind, u8) {
   return null;
 }
 
-// ---------- 图片尺寸：解码前先看标头，太大的不解（防止一张小图要求几 GB 记忆体） ----------
+// ---------- Image size: read the header before decoding, skip images too big (stops a small file asking for GBs of memory) ----------
 export const MAX_PIXELS = 40e6;
 export function imageDims(u8) {
   const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -411,7 +411,7 @@ export function imageDims(u8) {
   try {
     if (t === "png" && u8.length >= 24) return { w: dv.getUint32(16), h: dv.getUint32(20) };
     if (t === "gif" && u8.length >= 13) {
-      // 逻辑画面 + 每一格画面的大小都算（解码器会照最大的那格配记忆体）
+      // Count the logical screen and every frame size (decoders allocate memory for the largest frame)
       let w = dv.getUint16(6, true), h = dv.getUint16(8, true);
       let i = 13 + (u8[10] & 0x80 ? 3 * (2 << (u8[10] & 7)) : 0);
       for (let n = 0; i < u8.length && n < 4096; n++) {
@@ -445,6 +445,6 @@ export function imageDims(u8) {
       }
     }
   } catch (_) {}
-  return null; // 认不出尺寸：不解码
+  return null; // size unknown: do not decode
 }
 export const safeToDecode = (u8) => { const d = imageDims(u8); return !!d && d.w > 0 && d.h > 0 && d.w * d.h <= MAX_PIXELS; };

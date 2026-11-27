@@ -1,18 +1,18 @@
-// 草稿清单：存在 Chrome 插件自己的本机储存（chrome.storage.local），不上网。
-// 保留 90 天，自动删旧的。用户可在弹窗一键清空。
-// 每条草稿：
-//   id, chat_id, chat_name, is_group, text, created_at, source（哪个 AI 写的）, note,
-//   context_last_their_msg_time（AI 起草时对方最后一句的时间）,
+// Draft list: kept in the extension's own local storage (chrome.storage.local), never online.
+// Kept 90 days; old ones are deleted automatically. The user can clear all from the popup.
+// Each draft:
+//   id, chat_id, chat_name, is_group, text, created_at, source (which AI wrote it), note,
+//   context_last_their_msg_time (time of the other person's last message when the AI drafted),
 //   status: pending | inserted | copied | dismissed | replied
 //   inserted_at / copied_at / dismissed_at,
-//   actual_reply: { time, text }  ← 你之后真的发出的第一句
-//   actual_messages: [{ time, text, type }]  ← 你之后连发的那一轮全部（见 reconcile）；reply_closed
+//   actual_reply: { time, text }  ← the first message you actually sent afterwards
+//   actual_messages: [{ time, text, type }]  ← the whole round of messages you sent afterwards (see reconcile); reply_closed
 const KEY = "drafts";
 const KEEP_MS = 90 * 24 * 3600 * 1000;
 const MAX_DRAFTS = 2000;
 const MAX_TEXT = 4000;
 
-// 所有会改草稿清单的动作排队一个一个做（读→改→写中间不会被别的动作插进来，清空后也不会被旧资料写回来）
+// Every change to the draft list runs one at a time in a queue (nothing cuts into read, change, write; old data cannot come back after clearing)
 let queue = Promise.resolve();
 const serial = (fn) => { const p = queue.then(() => fn()); queue = p.catch(() => {}); return p; };
 
@@ -25,7 +25,7 @@ async function loadAll() {
 async function saveAll(list) {
   list.sort((a, b) => b.created_at.localeCompare(a.created_at));
   let keep = list.slice(0, MAX_DRAFTS);
-  // 储存空间满了：先删掉最旧的一半再试一次
+  // Storage full: delete the oldest half, then try again
   for (let i = 0; i < 3; i++) {
     try { await chrome.storage.local.set({ [KEY]: keep }); return; }
     catch (e) {
@@ -46,7 +46,7 @@ async function addDraftNow({ chat, text, source, note, contextTime }) {
   if (t.length > MAX_TEXT) return { ok: false, code: "BAD_PARAM", reason: tr(`草稿太长（最多 ${MAX_TEXT} 字）`, `The draft is too long (max ${MAX_TEXT} characters)`) };
   const list = await loadAll();
   const now = new Date().toISOString();
-  // 同一个对话旧的「待用」草稿 → 标成被新草稿取代
+  // Older "pending" drafts in the same chat: mark them as replaced by the new draft
   for (const d of list) if (d.chat_id === chat.id && d.status === "pending") { d.status = "superseded"; d.superseded_at = now; }
   const d = {
     id: crypto.randomUUID(),
@@ -84,7 +84,7 @@ async function updateDraftNow(id, patch) {
   return d;
 }
 
-// 用户在插件里删掉一条草稿（弹窗 / 仪表板）：真的从清单拿掉，不是标「不用了」
+// User deletes a draft in the extension (popup / dashboard): really remove it from the list, not just mark it "dismissed"
 export function removeDraft(id) {
   return serial(async () => {
     const list = await loadAll();
@@ -100,12 +100,12 @@ export function clearDrafts() {
   return serial(() => chrome.storage.local.remove(KEY));
 }
 
-// 用对话里的信息更新草稿：草稿之后我真的发了什么（研究比对用）。
-// 用户常常不照用草稿，而是自己连发几条，所以收集「一轮回复」：
-//   开始 = 草稿建立时间
-//   结束 = 对方在我回复之后又说话，或同一个对话有了下一条草稿，或我第一句之后过了 6 小时
-//   最多收 20 条
-// actual_reply = 第一句（旧字段，保留）；actual_messages = 这一轮全部；reply_closed = 这一轮已结束
+// Update drafts from the chat: what I actually sent after the draft (for comparison research).
+// Users often don't use the draft as-is and send several messages themselves, so collect "one round of reply":
+//   start = when the draft was created
+//   end = the other person speaks again after my reply, or the same chat gets a newer draft, or 6 hours pass after my first message
+//   collect at most 20 messages
+// actual_reply = first message (old field, kept); actual_messages = the whole round; reply_closed = the round has ended
 const ROUND_MS = 6 * 3600 * 1000;
 const MAX_ROUND = 20;
 export function reconcile(chatId, messages) { return serial(() => reconcileNow(chatId, messages)); }

@@ -37,7 +37,7 @@
     return s ? s.startsWith("true_") : false;
   };
   // --- textOf (keep the same in reader.js and indexer.js; tests check it) ---
-  // 「看一次」：WhatsApp 的任何标记都算（记忆体里的信息，或硬盘里存的原始资料，栏位名称 / 型别可能不同）
+  // "View once": any WhatsApp marker counts (in-memory message or raw data stored on disk; field names / types may differ)
   const isOnce = (m) => {
     if (!m || typeof m !== "object") return false;
     if (m.isViewOnce === true || m.isViewOnce === 1 || m.isViewOnce === "true" || /view_?once/i.test(String(m.type || "") + " " + String(m.subtype || ""))) return true;
@@ -109,7 +109,7 @@
       contactNames = new Map(); contactsAt = Date.now();
       try {
         for (const ct of C?.Contact?.getModelsArray?.() || []) {
-          // 只有用户自己存的联系人名字（ct.name）可信；对方自己取的名字谁都可以改
+          // Only contact names the user saved (ct.name) are trusted; names people give themselves can be set to anything
           if (ct.id?._serialized && ct.name) contactNames.set(ct.id._serialized, { n: ct.name, saved: true });
           else if (ct.id?._serialized && (ct.pushname || ct.verifiedName)) contactNames.set(ct.id._serialized, { n: ct.pushname || ct.verifiedName, saved: false });
         }
@@ -120,7 +120,7 @@
     const num = author ? author.split("@")[0] : "";
     const c = author && contactNames.get(author);
     const n = String(c?.n || m.notifyName || "").trim().slice(0, 100);
-    // 「Me」只给用户自己。对方自己取的名字一律加上号码
+    // "Me" is only for the user. Names people give themselves always get their number added
     const looksLikeMe = /^(me|you|myself|我|自己|本人)$/i.test(n.normalize("NFKC").replace(/[^\p{L}]/gu, ""));
     return !n ? num : c?.saved && !looksLikeMe ? n : `${n} (+${num})`;
   };

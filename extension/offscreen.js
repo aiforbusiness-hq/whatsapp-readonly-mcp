@@ -1,4 +1,4 @@
-// 看不见的插件页面：把文件片段接起来，做成 Chrome 可以下载的网址。只听插件自己的背景程序。
+// Hidden extension page: joins file pieces into a URL that Chrome can download. Listens only to the extension's own background script.
 const boxes = new Map(); // id -> { parts, url }
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.target !== "offscreen" || sender.id !== chrome.runtime.id || sender.tab) return false;
@@ -8,12 +8,12 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     boxes.set(msg.box, b);
     reply({ ok: true });
   } else if (msg.type === "make") {
-    const blob = new Blob(b.parts, { type: "application/octet-stream" }); // 不让 Chrome 猜类型、改副档名
+    const blob = new Blob(b.parts, { type: "application/octet-stream" }); // stops Chrome from guessing the type and changing the file extension
     b.url = URL.createObjectURL(blob);
     boxes.set(msg.box, b);
     reply({ ok: true, url: b.url, size: blob.size });
   } else if (msg.type === "frame") {
-    // 影片预览：在这个看不见的页面里取一格画面，重新画成小 JPEG（不播放声音，不显示给任何人）
+    // Video preview: grab one frame in this hidden page and redraw it as a small JPEG (no sound played, shown to no one)
     frame(b.parts, msg.mime).then((r) => reply({ ok: !!r.data, ...r }), (e) => reply({ ok: false, why: String(e?.message || e).slice(0, 80) }));
     return true;
   } else if (msg.type === "drop") {
@@ -24,8 +24,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   return false;
 });
 
-// 1. 直接从 MP4 拿第一张画面，用 Chrome 的 WebCodecs 解码（不靠播放器：Chrome 对看不见的页面常常不解码影片）
-// 2. 不行再用 <video>
+// 1. Take the first frame straight from the MP4 and decode it with Chrome's WebCodecs (no player: Chrome often does not decode video in hidden pages)
+// 2. If that fails, fall back to <video>
 async function frame(parts, mime) {
   if (!parts.length || !/^video\/(mp4|3gpp|quicktime|webm)$/.test(mime || "")) return { why: "type" };
   const blob = new Blob(parts, { type: mime });
@@ -44,7 +44,7 @@ const toJpeg = async (src, w, h) => {
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
   return btoa(s);
 };
-// 最小的 MP4 读法：只找第一条影像轨的 avcC、第一个样本的位置和大小
+// Minimal MP4 parsing: find only the avcC of the first video track, and the offset and size of the first sample
 async function firstFrameMp4(blob) {
   if (typeof VideoDecoder === "undefined" || blob.size > 150 * 1024 * 1024) return null;
   const buf = new Uint8Array(await blob.arrayBuffer()), dv = new DataView(buf.buffer);
@@ -70,7 +70,7 @@ async function firstFrameMp4(blob) {
     const st = kids(stbl.start, stbl.end), stsd = one(st, "stsd"), stsz = one(st, "stsz"), stco = one(st, "stco") || one(st, "co64");
     if (!stsd || !stsz || !stco) continue;
     const entry = kids(stsd.start + 8, stsd.end)[0];
-    if (!entry || !/^avc[13]$/.test(entry.type)) return null;          // 只做 H.264（WhatsApp 影片几乎都是）
+    if (!entry || !/^avc[13]$/.test(entry.type)) return null;          // H.264 only (almost all WhatsApp videos are)
     const w = dv.getUint16(entry.start + 24), h = dv.getUint16(entry.start + 26);
     const avcC = one(kids(entry.start + 78, entry.end), "avcC"); if (!avcC) return null;
     const desc = buf.slice(avcC.start, avcC.end);

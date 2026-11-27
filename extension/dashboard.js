@@ -1,20 +1,20 @@
-// 仪表板。两种用法：
-// - 独立分页：dashboard.html 载入这个文件，挂在 document
-// - WhatsApp 页面里：manifest 把这个文件当内容脚本载入，sidebar.js 把画面放进 closed shadow DOM 再呼叫 mount()
-//   （WhatsApp 网页有 Cross-Origin-Embedder-Policy: require-corp，iframe 会被 Chrome 挡住，所以不用 iframe）
-// 资料全部来自背景程序；对话名称、信息内容一律用 textContent 显示；导出 = 在这台电脑产生文件
+// Dashboard. Two ways to use it:
+// - Standalone tab: dashboard.html loads this file and mounts it on document
+// - Inside the WhatsApp page: the manifest loads this file as a content script; sidebar.js puts the view in a closed shadow DOM and calls mount()
+//   (WhatsApp Web sends Cross-Origin-Embedder-Policy: require-corp, so Chrome blocks iframes; that is why no iframe is used)
+// All data comes from the background script; chat names and message text are always shown with textContent; export = a file made on this computer
 (() => {
 if (globalThis.__waAssistantDashboard) return;
 function mount(ROOT, OPTS) {
 const EMBED = !!OPTS.embed;
-// 画面文字：英文时把 HTML 里的中文换掉（i18n.js）
+// UI text: in English, replace the Chinese in the HTML (i18n.js)
 localizeDOM(ROOT, {"自动「不用回」": "Auto \"No reply needed\"", "等了超过这么多天的对话，自动当作不用回，不算进「等你回」。对方再传信息就会回来。": "Chats waiting longer than this count as \"No reply needed\" and leave the waiting list. They come back when the person messages again.", "自动不用回": "Auto no reply needed", "关": "Off", "3 天": "3 days", "7 天": "7 days", "14 天": "14 days", "30 天": "30 days", "全部标为不用回": "Mark all as No reply needed", "请让电脑开着，并在 Chrome 打开 WhatsApp Web。关掉了，AI 就读不到。": "Keep your computer on and WhatsApp Web open in Chrome. Your AI can only read it while they're open.", "设定": "Settings", "语言": "Language", "仪表板、插件弹窗和输入框上方的草稿卡用的语言。": "Used by the dashboard, the extension popup and the draft card above the message box.", "跟浏览器": "Same as browser", "AI for Business Chat Assistant 仪表板": "AI for Business Chat Assistant dashboard", "连接中…": "Connecting…", "仪表板": "Dashboard", "概览": "Overview", "谁在等你回": "Who's waiting for you", "AI 活动纪录": "AI activity", "AI 读了什么": "What your AI read", "草稿 vs 实际": "Drafts vs actual", "AI 草稿用了多少": "How much AI drafting you used", "导出": "Export", "CSV / JSON 存到下载": "CSV / JSON to Downloads", "资料只留在你的浏览器，只在你要求时由 AI 连接器读取。": "Your data stays in your browser. Your AI connector reads it only when you ask.", "重新读取": "Refresh", "在新分页打开": "Open in new tab", "关闭仪表板（Esc）": "Close dashboard (Esc)", "关闭（Esc）": "Close (Esc)", "配对码": "Pairing code", "6 位数": "6 digits", "配对": "Pair", "资料只在你的电脑里": "Your data stays on your computer", "只走本机连线（127.0.0.1）。我们没有服务器，": "Local connections only (127.0.0.1). We have no server, and ", "对话不经过我们。": "your chats never pass through us.", "你的 AI 通过 Plugin（MCP），用上锁的本机连线连到 Chrome Extension，再读 WhatsApp Web。全部在你的电脑里。": "Your AI connects through its Plugin (MCP) over a locked local connection to the Chrome extension, which reads WhatsApp Web. All on your computer.", "你的电脑": "Your computer", "你的 AI + Plugin": "Your AI + Plugin", "只读": "Read-only", "怎么确定是安全的": "How you can tell it is safe", "现在就检查得到的 · 老实说": "What you can check now · the honest part", "你在 Claude / ChatGPT 里问问题时，AI 读到的内容会送去 Anthropic 或 OpenAI 处理，就像平常用 AI 一样；不会送到 AI for Business。": "When you ask Claude / ChatGPT a question, what the AI reads is sent to Anthropic or OpenAI to process, just like normal AI use. Nothing is sent to AI for Business.", "这是非官方工具，用的是 WhatsApp Web 内部的读法。WhatsApp 有可能限制账号；建议先用工作副号。": "This is an unofficial tool that reads WhatsApp Web internals. WhatsApp could restrict accounts; try it with a work number first.", "程序不会发信息，回复永远由你自己按发送。": "The program never sends messages; you always press send yourself.", "想完全清掉：插件弹窗「清空草稿」、「AI 活动纪录」清空纪录，再移除插件。": "To remove everything: \"Clear drafts\" in the extension popup, clear \"AI activity\", then remove the extension.", "个人在等你回": "waiting for your reply", "看全部": "See all", "你应该知道": "Worth knowing", "信息趋势": "Message trends", "近 14 天收发量 · 别人几点找你": "Last 14 days · when people message you", "图表": "Charts", "近 14 天": "Last 14 days", "时段": "By hour", "收到": "Received", "我发出": "You sent", "看表格": "Show table", "最活跃的对话": "Most active chats", "近 7 天": "Last 7 days", "近 14 天 AI 请求": "AI requests, last 14 days", "请求纪录": "Request log", "按 AI 筛选": "Filter by AI", "显示更多": "Show more", "关于这份纪录": "About this log", "存什么 · 怎么清空": "What is kept · how to clear it", "清空活动纪录": "Clear AI activity", "AI 草稿你用了（照用或改过再发）": "of AI drafts you used (as is or edited)", "每一条草稿": "Every draft", "按结果筛选": "Filter by result", "点一条看草稿和你实际发出的信息。": "Click one to see the draft and what you actually sent.", "时间范围": "Time range", "近 30 天": "Last 30 days", "近 90 天（全部）": "Last 90 days (all)", "对话时间线": "Chat timeline", "有 AI 草稿的对话，所有信息按时间排好；你发出的每一条都有时间，不管有没有用草稿。": "Chats that have AI drafts, every message in time order; each message you sent has its time, whether or not you used the draft.", "下载 CSV": "Download CSV", "放入 AI 草稿": "Include AI drafts", "草稿排在它建立的时间点（原本打算填进输入框的位置）": "Each draft is placed at the time it was created (where it was meant to go into the message box)", "放入对方的信息": "Include their messages", "关掉 = 只有你自己发出的信息": "Off = only the messages you sent", "其他格式": "Other formats", "只有草稿 · 草稿 + 回复 · JSON · 活动纪录": "Drafts only · drafts + replies · JSON · AI activity", "只有草稿": "Drafts only", "AI 写的每一条草稿和时间。": "Every draft the AI wrote, with its time.", "草稿 + 实际回复": "Drafts + actual replies", "每条草稿一行，旁边是插件估计的「那一轮」回复和相似度。": "One row per draft, next to the reply round the extension matched and the similarity.", "完整资料": "Full data", "给另一个 AI 分析用。": "For another AI to analyse.", "哪个 AI 什么时候读了什么。": "Which AI read what, and when.", "文件存到你电脑的「下载」文件夹，不会上传。CSV 可以用 Excel / Google 表格 / Numbers 打开。": "Files are saved to your Downloads folder and never uploaded. CSV opens in Excel / Google Sheets / Numbers.", "看文件真正的内容，不信名字。只存看得完、查得完的文件：照片、影片、声音、纯文字、PDF、新版 Office（docx / xlsx / pptx）。": "Judged by what the file really is, not its name. Only types that can be checked completely are saved: photos, video, audio, plain text, PDF and new Office files (docx / xlsx / pptx).", "其他一律不存：程序和脚本、网页、所有压缩档（zip、rar、7z）、旧版 Office（doc / xls / ppt）、RTF、SVG、名字跟内容对不上的文件。要的话，确认是认识的人传的，再自己在 WhatsApp 里下载。": "Everything else is refused: programs and scripts, web pages, all archives (zip, rar, 7z), old Office files (doc / xls / ppt), RTF, SVG, and files whose name does not match their content. If you trust the sender, download it in WhatsApp yourself.", "PDF 会解开每一部分检查：带程序码、会叫电脑执行程序、夹带别的文件，就不存。Office 文件带巨集、内嵌物件、DDE 或连到外面的范本，也不存。CSV 表格里有公式或指令（= + - @ 开头），也不存。加密、太大或太复杂看不完的，也不存。": "Every part of a PDF is unpacked and checked: code, starting programs or attached files means it is not saved. Office files with macros, embedded objects, DDE or outside templates are not saved either, nor CSV files with formulas or commands (cells starting with = + - @). Encrypted, too large or too complex files are not saved.", "没有「打开」按钮，只有「在文件夹中显示」。打开前先确认是认识的人传的。": "There is no Open button, only Show in folder. Before opening a file, make sure someone you know sent it.", "检查不到：照片、影片、PDF 阅读程序本身的漏洞，和新的病毒。电脑和 Chrome 的防毒还是要开着。": "Not caught: weaknesses in photo, video or PDF programs themselves, and new viruses. Keep your computer's and Chrome's virus protection on."});
 localizeDOM(ROOT, {"新的 AI 草稿": "New AI drafts", "看全部草稿": "See all drafts", "还没发出去。打开对话，草稿会出现在输入框上方；你看过再按发送。": "Not sent yet. Open the chat and the draft appears above the message box; check it, then press send yourself."});
 localizeDOM(ROOT, {"我的资料": "My data", "存了什么 · 清除": "What is stored · Clear", "这些资料只存在这台电脑的 Chrome 里，不会传到网络上。清除后没办法复原。已经下载到「下载 / AI for Business Chat Assistant」的文件不会被删掉，要删请自己在文件夹里删。": "This data is kept only in Chrome on this computer and is never sent over the internet. Clearing cannot be undone. Files already in Downloads / AI for Business Chat Assistant are not deleted; delete them in the folder yourself.", "全部清除": "Clear everything", "上面每一项都清掉，包括配对。之后要用，要在 AI 里问「WhatsApp 状态」拿新的配对码重新配对。": "Clears every item above, including pairing. To use it again, ask your AI \"WhatsApp status\" for a new pairing code.", "取消": "Cancel", "清除": "Clear"});
 localizeDOM(ROOT, {"取消配对": "Unpair", "插件忘掉配对密钥、断开所有 AI。之后要用，要在 AI 里问「WhatsApp 状态」拿新的配对码重新配对。": "The extension forgets its pairing secret and disconnects every AI. To use it again, ask your AI \"WhatsApp status\" for a new pairing code and pair again.", "AI 下载的文件": "Files AI downloaded", "最近下载": "Recent downloads", "预览 · 安全检查": "Previews · safety checks", "你叫 AI 下载的照片、影片、语音和文件。预览图是插件重新画过的小图，不是原文件。这里不会打开文件。": "Photos, videos, voice notes and files you asked AI to download. Previews are small copies redrawn by the extension, not the original files. Nothing is opened here.", "怎么防恶意文件": "How malware is kept out", "检查什么 · 检查不到什么": "What is checked · what is not", "没有「打开」按钮，只有「在文件夹中显示」。打开前先确认是认识的人传的。": "There is no Open button, only Show in folder. Before opening a file, make sure someone you know sent it.", "清空这份纪录": "Clear this list"});
 
 const $ = (id) => ROOT.getElementById(id);
-// 跟背景程序讲话：有时间上限；插件被重新载入（旧页面跟插件断线）时给清楚的提示
+// Talk to the background script: with a time limit; show a clear message if the extension was reloaded (old page lost its link)
 let ORPHANED = false;
 async function ask(msg, ms = 20000) {
   if (!chrome.runtime?.id) { ORPHANED = true; throw new Error("ORPHANED"); }
@@ -55,7 +55,7 @@ function s(tag, attrs) {
   return n;
 }
 
-// ---------- 格式 ----------
+// ---------- Formatting ----------
 const pad = (n) => String(n).padStart(2, "0");
 function fmtTime(iso) {
   if (!iso) return "—";
@@ -103,7 +103,7 @@ const OP_NAMES = {
   list_awaiting_reply: tr("找等我回的人", "Found who's waiting"), save_draft: tr("存回复草稿", "Saved a reply draft"), list_drafts: tr("读草稿清单", "Read the draft list")
 };
 
-// ---------- 草稿 vs 实际：相似度（字元两两一组比对，中英文都适用） ----------
+// ---------- Drafts vs actual: similarity (compares character pairs; works for Chinese and English) ----------
 function norm(t) { return String(t || "").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, ""); }
 function bigrams(t) {
   const m = new Map();
@@ -145,10 +145,10 @@ function analyze(d) {
   return { act, joined, sim, outcome, minutes, used_button: !!(d.inserted_at || d.copied_at) };
 }
 
-// 新草稿：还没用（pending）、之后你也还没回、7 天内存的。概览最上面和草稿列表都用这个标出来
+// New draft: not used yet (pending), you have not replied since, saved within 7 days. Highlighted at the top of Overview and in the draft list
 const isNewDraft = ({ d, a }) => d.status === "pending" && !a.act.length && Date.now() - Date.parse(d.created_at) < 7 * 86400000;
 
-// ---------- 资料 ----------
+// ---------- Data ----------
 let DATA = null;
 let actFilter = "all";
 let actShown = 20;
@@ -174,7 +174,7 @@ async function load() {
   await applyIgnored();
   render();
 }
-// 「不用回」：用户标记的对话先不算「在等你回」，直到对方再传新信息
+// "No reply needed": chats the user marked are not counted as "waiting for you" until the other side sends a new message
 let IGNORED = {};
 async function applyIgnored() {
   try { IGNORED = (await chrome.storage.local.get("ignored_waiting")).ignored_waiting || {}; } catch (_) { IGNORED = {}; }
@@ -183,7 +183,7 @@ async function applyIgnored() {
   st.waiting_all = st.waiting_all || st.waiting_longest;
   st.base_totals = st.base_totals || { ...st.totals };
   const isIgn = (w) => IGNORED[w.id] && IGNORED[w.id] === (w.last || w.since);
-  // 被标「不用回」、而且现在还在等的人：直接查这几个对话（不扫全部）
+  // People marked "No reply needed" who are still waiting: check just these chats (do not scan all)
   const ids = Object.keys(IGNORED);
   let ign = [];
   if (ids.length) {
@@ -201,14 +201,14 @@ async function applyIgnored() {
 async function setIgnored(w, on) {
   const cur = (await chrome.storage.local.get("ignored_waiting")).ignored_waiting || {};
   if (on) cur[w.id] = w.last || w.since; else delete cur[w.id];
-  // 只留最近 500 个
+  // Keep only the latest 500
   const keys = Object.keys(cur);
   if (keys.length > 500) for (const k of keys.slice(0, keys.length - 500)) delete cur[k];
   await chrome.storage.local.set({ ignored_waiting: cur });
   await applyIgnored();
   render();
 }
-// 一次把现在等你回的人全部标为「不用回」（按两次确认）
+// Mark everyone now waiting for you as "No reply needed" in one go (press twice to confirm)
 async function setIgnoredMany(list) {
   const cur = (await chrome.storage.local.get("ignored_waiting")).ignored_waiting || {};
   for (const w of list) cur[w.id] = w.last || w.since;
@@ -257,7 +257,7 @@ function render() {
   renderSetup();
   showBanner(stats?.ok ? "" : tr("WhatsApp Web 现在读不到（", "WhatsApp Web can't be read right now (") + (stats?.reason || tr("没开或还在载入", "not open or still loading")) + tr("）。只显示已存的草稿和纪录。", "). Showing saved drafts and records only."));
 
-  // 选单上的小字
+  // Small text in the menu
   if (stats?.ok) $("subOverview").textContent = stats.totals.waiting_people ? tr(`${stats.totals.waiting_people} 个人在等你回`, `${stats.totals.waiting_people} waiting for your reply`) : tr("没有人在等你回", "No one is waiting for your reply");
   $("subActivity").textContent = activity.log[0] ? tr(`上一个请求：${ago(activity.log[0].time)}`, `Last request: ${ago(activity.log[0].time)}`) : tr("还没有请求", "No requests yet");
   const ds = draftSummary(90);
@@ -278,7 +278,7 @@ function render() {
 }
 
 
-// 资料安全图：最左边显示「现在连着」的 AI（Claude / ChatGPT…），几个就叠几个
+// Data safety diagram: far left shows the AIs "connected now" (Claude / ChatGPT…), stacked, one per AI
 const AI_ICON = {
   Claude: (g) => {
     g.append(s("circle", { r: "18", fill: "#d97757" }));
@@ -311,12 +311,12 @@ function renderFlow() {
   const flowSvg = ROOT.querySelector(".flow");
   flowSvg.classList.toggle("off", MODE !== "ok");
   flowSvg.classList.toggle("nowa", !DATA.stats?.ok);
-  // AI 没开时：显示最近用过的 AI（灰色）
+  // When no AI is open: show the most recently used AI (grey)
   if (!fams.length) fams = [...new Set(DATA.activity.log.slice(0, 50).map((x) => clientFamily(x.client)).filter((f) => f !== "Other"))].slice(0, 3);
   const box = $("aiIcons");
   box.replaceChildren();
   if (!fams.length) fams = ["Other"];
-  // 横向一排：连着的 AI 图示 + AI for Business 图示（Plugin），一样大小、互相叠一点
+  // One horizontal row: connected AI icons + the AI for Business icon (Plugin), same size, slightly overlapping
   const n = fams.length + 1, step = 26, start = -((n - 1) * step) / 2;
   fams.forEach((f, i) => {
     const g = s("g", { transform: `translate(${start + i * step} 0)`, class: "ai-stack" });
@@ -337,7 +337,7 @@ function renderFlow() {
   $("aiSub").textContent = { ok: tr("已连上 · MCP", "Connected · MCP"), pair: tr("要配对", "Needs pairing"), never: tr("还没连上", "Not connected"), down: tr("AI 没开", "AI is closed") }[MODE];
 }
 
-// ---------- 连线状态：ok 已连上 / pair 要配对 / never 从没连过 / down 配对过但 AI 现在没开 ----------
+// ---------- Connection state: ok connected / pair needs pairing / never never connected / down paired but AI not open now ----------
 let MODE = "ok";
 function connMode(c) {
   if (c.ready > 0) return "ok";
@@ -353,7 +353,7 @@ function renderSetup() {
   const card = $("setup");
   const stOk = !!DATA.stats?.ok;
   card.hidden = MODE === "ok";
-  // 「电脑要开着」的提醒只出现一次：没连上时放在设定卡里，连上后放在资料安全卡里
+  // The "keep your computer on" reminder shows only once: in the settings card when not connected, in the data safety card once connected
   const keep = ROOT.querySelector(".safe .keep-open");
   if (keep) keep.hidden = MODE !== "ok";
   if (MODE === "ok") return;
@@ -381,7 +381,7 @@ function renderSetup() {
     $("setupTitle").textContent = tr("AI 现在没开", "Your AI is closed right now");
     $("setupText").textContent = tr("打开 Claude 或 ChatGPT 就会自动连上，不用再配对。", "Open Claude or ChatGPT and it reconnects by itself; no need to pair again.") + (last ? tr(`上次连上是 ${ago(last)}。`, `Last connected ${ago(last)}.`) : "") + tr("AI 没开的时候，下面的统计、草稿和导出照样能用。", " While the AI is closed, the stats, drafts and export below still work.");
   }
-  if (!stOk && MODE !== "ok") {} // WhatsApp 读不到的提示在横幅
+  if (!stOk && MODE !== "ok") {} // the "cannot read WhatsApp" notice is in the banner
 }
 $("pairForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -397,7 +397,7 @@ $("pairForm").addEventListener("submit", async (e) => {
   else { msg.className = "pair-msg bad"; msg.textContent = r?.reason || tr("配对失败", "Pairing failed"); }
 });
 
-// 每 8 秒看一次连线：AI 打开 / 关掉 / 配对好，画面自己更新
+// Check the connection every 8 seconds: when AI opens / closes / pairs, the view updates itself
 let lastPollMode = null;
 const poll = setInterval(async () => {
   if (document.hidden || !DATA || ORPHANED) return;
@@ -409,7 +409,7 @@ const poll = setInterval(async () => {
   lastPollMode = m;
 }, 8000);
 
-// ---------- 确认视窗：清除 / 取消配对之前一定先问 ----------
+// ---------- Confirm dialog: always ask before clearing / unpairing ----------
 function confirmBox(title, body, yes) {
   return new Promise((resolve) => {
     const back = $("confirmBack"), ok = $("confirmYes"), no = $("confirmNo");
@@ -419,7 +419,7 @@ function confirmBox(title, body, yes) {
     no.textContent = tr("取消", "Cancel");
     const before = ROOT.activeElement;
     back.hidden = false;
-    no.focus(); // 预设停在「取消」，按 Enter 不会误删
+    no.focus(); // focus "Cancel" by default so Enter does not delete by mistake
     const done = (v) => {
       back.hidden = true;
       ok.removeEventListener("click", onYes); no.removeEventListener("click", onNo); back.removeEventListener("keydown", onKey); back.removeEventListener("click", onBack);
@@ -437,7 +437,7 @@ function confirmBox(title, body, yes) {
   });
 }
 
-// ---------- 我的资料：存了什么、清除 ----------
+// ---------- My data: what is stored, clearing it ----------
 const DATA_ROWS = [
   { k: "drafts", t: () => tr("AI 草稿", "AI drafts"), d: () => tr("AI 帮你写的回覆草稿，和你后来真的发了什么（用来比较）。", "Reply drafts the AI wrote, and what you really sent afterwards (for comparing)."), n: (x) => tr(`${x.count} 份`, `${x.count}`) },
   { k: "activity", t: () => tr("AI 活动纪录", "AI activity"), d: () => tr("AI 什么时候读了什么（不存信息内容）。", "When the AI read what (message content is not kept)."), n: (x) => tr(`${x.count} 笔`, `${x.count} entries`) },
@@ -487,7 +487,7 @@ $("clearAllData").addEventListener("click", async (e) => {
 });
 const DATA_KINDS_ALL = DATA_ROWS.map((r) => r.k);
 
-// ---------- 切换分区（一次只看一个；网址 #activity 可以直接打开） ----------
+// ---------- Switch sections (one at a time; URL #activity opens one directly) ----------
 const TITLES = { overview: tr("概览", "Overview"), activity: tr("AI 活动纪录", "AI activity"), files: tr("AI 下载的文件", "Files AI downloaded"), drafts: tr("草稿 vs 实际", "Drafts vs actual"), export: tr("导出", "Export"), data: tr("我的资料", "My data"), settings: tr("设定", "Settings") };
 function show(view, push = true) {
   if (!TITLES[view]) view = "overview";
@@ -502,7 +502,7 @@ ROOT.querySelectorAll(".menu .item").forEach((b) => b.addEventListener("click", 
 if (!EMBED) addEventListener("hashchange", () => show(location.hash.slice(1), false));
 if (!EMBED && location.hash.length > 1) show(location.hash.slice(1), false);
 
-// ---------- 概览 ----------
+// ---------- Overview ----------
 function draftSummary(days) {
   const since = Date.now() - days * 86400000;
   const rows = DATA.analyzed.filter((x) => Date.parse(x.d.created_at) >= since);
@@ -524,7 +524,7 @@ function avatar(name) {
   const ch = Array.from(String(name || "?").trim())[0] || "?";
   return el("span", { class: "avatar", "aria-hidden": "true", style: null, text: ch.toUpperCase() });
 }
-// 删一条草稿：按两次才删（第一次变「确定删除？」，4 秒内再按）；删了就重新载入
+// Delete a draft: press twice (first press shows "Delete?", press again within 4 seconds); reload after deleting
 function removeBtn(id) {
   const label = tr("删除", "Remove");
   const b = el("button", { class: "remove-btn", title: tr("从草稿清单删掉这一条（不会动 WhatsApp）", "Delete this draft from the list (WhatsApp is not touched)") }, label);
@@ -541,7 +541,7 @@ function removeBtn(id) {
   });
   return b;
 }
-// 草稿的「打开」：打开对话并把草稿填进输入框（不发送）
+// Draft "Open": open the chat and fill the draft into the message box (never sends)
 function openDraftBtn(id) {
   return el("button", {
     class: "open-btn", title: tr("打开对话，草稿填进输入框（会标已读；不会发送）", "Open the chat with the draft filled in (marks it as read; nothing is sent)"),
@@ -611,7 +611,7 @@ $("seeDrafts").addEventListener("click", () => { draftFilter = "all"; draftShown
 function renderOverview() {
   renderNewDrafts();
   const st = DATA.stats?.ok ? DATA.stats : null;
-  // 等你回（最重要的放最大）
+  // Waiting for you (most important, shown largest)
   $("waitBig").textContent = st ? String(st.totals.waiting_people) : "–";
   const pill = $("waitPill");
   pill.hidden = !(st && st.totals.waiting_over_24h);
@@ -631,13 +631,13 @@ function renderOverview() {
   if (!waiting.length) wl.append(el("li", {}, el("span", { class: "meta", text: st ? tr("现在没有人在等你回。", "No one is waiting for your reply right now.") : tr("打开 WhatsApp Web 后才看得到。", "Open WhatsApp Web to see this.") })));
   if (st?.ignored_count) wl.append(el("li", { class: "ignored-note" }, tr(`另外 ${st.ignored_count} 个你标了「不用回」`, `${st.ignored_count} more marked \"No reply needed\"`), el("button", { class: "text-btn", style: null, onclick: clearIgnored }, tr("全部还原", "Restore all"))));
   const ia = $("ignoreAll");
-  ia.hidden = waiting.length < 2; // 只有一个人时，旁边的「不用回」就够了
+  ia.hidden = waiting.length < 2; // with only one person, the "No reply needed" next to it is enough
   if (!ignoreAllArmed) ia.textContent = tr("全部标为不用回", "Mark all as No reply needed");
   const more = $("moreWaiting");
   more.hidden = waiting.length <= 3;
   more.textContent = showAllWaiting ? tr("收起", "Show less") : tr(`看全部（${waiting.length}）`, `See all (${waiting.length})`);
 
-  // 右边三个数字
+  // The three numbers on the right
   const today = st?.daily?.[st.daily.length - 1];
   const stat = (k, v, small) => el("div", {}, el("dt", { text: k }), el("dd", {}, v, small ? el("small", { text: " " + small }) : null));
   $("statList").replaceChildren(
@@ -649,7 +649,7 @@ function renderOverview() {
     stat(tr("你一般多快回", "How fast you usually reply"), st ? dur(st.reply_minutes_30d.median) : "–", st?.reply_minutes_30d.count ? tr("近 30 天一对一", "1-to-1 chats, last 30 days") : "")
   );
 
-  // 你应该知道（先给 3 条）
+  // You should know (first 3 items)
   const ins = [];
   if (st) {
     const w = st.waiting_longest[0];
@@ -677,7 +677,7 @@ function renderOverview() {
   ul.replaceChildren(...tipsShown.map(([cls, text]) => el("li", {}, tipIcon(cls), el("span", { text }))));
   if (ins.length > 3) ul.append(el("li", {}, el("button", { class: "text-btn", onclick: () => { showAllTips = !showAllTips; renderOverview(); } }, showAllTips ? tr("收起", "Show less") : tr(`再看 ${ins.length - 3} 条`, `${ins.length - 3} more`))));
 
-  // 图表（收起在「信息趋势」里，一次一张）
+  // Charts (collapsed under "Message trends", one at a time)
   drawChart();
 
   const tl = $("topList");
@@ -705,8 +705,8 @@ $("tableToggle").addEventListener("click", () => {
   $("tableToggle").textContent = t.hidden ? tr("看表格", "Show table") : tr("收起表格", "Hide table");
 });
 
-// ---------- AI 活动纪录 ----------
-// 品牌色：Claude 橘色、ChatGPT / Codex 黑色
+// ---------- AI activity log ----------
+// Brand colours: Claude orange, ChatGPT / Codex black
 const AI_COLOR = { Claude: "#d97757", ChatGPT: "#111111", Other: "#54656f" };
 function aiSvg(f, cls) {
   const svg = s("svg", { viewBox: "-20 -20 40 40", class: cls, "aria-hidden": "true" });
@@ -776,7 +776,7 @@ function drawActivityChart(log) {
   }
   const total = days.reduce((a, r) => a + r.n, 0);
   $("actTotal").textContent = tr(`共 ${total} 次`, `${total} total`);
-  // 图例：只列出现过的 AI
+  // Legend: list only the AIs that appear
   const famsSeen = [...new Set(days.flatMap((r) => Object.keys(r.fam)))];
   $("actLegend").replaceChildren(...famsSeen.map((f) => el("span", { class: "leg" }, el("i", { style: null }), f)));
   $("actLegend").querySelectorAll("i").forEach((i, k) => { i.style.background = AI_COLOR[famsSeen[k]] || AI_COLOR.Other; });
@@ -795,7 +795,7 @@ function drawActivityChart(log) {
     const hl = s("rect", { x: gx + 1, y: T, width: gw - 2, height: ih, class: "hl", fill: "transparent" });
     const hit = s("rect", { x: gx, y: T, width: gw, height: ih + B, class: "hit", fill: "transparent" });
     svg.append(hl);
-    // 每个 AI 一段，叠起来（Claude 橘色、ChatGPT 黑色）；最上面那段圆角
+    // One stacked segment per AI (Claude orange, ChatGPT black); the top segment has rounded corners
     const parts = Object.entries(r.fam).sort((a, b) => (a[0] === "Claude" ? -1 : 1));
     let y = T + ih;
     parts.forEach(([f, n], k) => {
@@ -826,9 +826,9 @@ $("clearAct").addEventListener("click", async (e) => {
   load();
 });
 
-// ---------- AI 下载的文件：预览 + 安全检查 ----------
-// 文件名、对话名都是对方给的，一律 textContent。缩图是插件自己重新画的 JPEG，画在 canvas 上（不用网址、不用 innerHTML）。
-// 永远没有「打开」：只有「在文件夹中显示」。
+// ---------- Files downloaded by AI: preview + safety check ----------
+// File names and chat names come from other people, so always textContent. Thumbnails are JPEGs the extension redraws itself, drawn on a canvas (no URL, no innerHTML).
+// There is never an "Open": only "Show in folder".
 let fileFilter = "all";
 const KIND_IC = { image: "M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4", av: "M5 5h10v14H5z M15 10l5-3v10l-5-3", pdf: "M6 3h9l4 4v14H6z M15 3v4h4", archive: "M6 3h12v18H6z M11 3v2h2v2h-2v2h2v2h-2", other: "M6 3h9l4 4v14H6z M15 3v4h4" };
 function kindOf(x) {
@@ -922,7 +922,7 @@ $("clearFiles").addEventListener("click", async (e) => {
   load();
 });
 
-// ---------- 草稿 vs 实际 ----------
+// ---------- Drafts vs actual ----------
 const STACK = ["same", "edited", "rewrote", "noreply", "waiting", "dismissed"];
 function renderDrafts() {
   const ds = draftSummary(90);
@@ -984,7 +984,7 @@ function renderDrafts() {
 }
 $("moreDrafts").addEventListener("click", () => { draftShown += 20; renderDrafts(); });
 
-// ---------- 图表（手写 SVG；有提示框和表格） ----------
+// ---------- Charts (hand-written SVG; with tooltips and tables) ----------
 const tip = $("tip");
 function showTip(e, html) {
   tip.replaceChildren(...html);
@@ -995,7 +995,7 @@ function showTip(e, html) {
 }
 const hideTip = () => { tip.hidden = true; };
 
-// 顶端圆角、底端贴着基线的柱子
+// Bar with a rounded top and a flat bottom on the baseline
 function barPath(x, y, w, h, r = 4) {
   if (h <= 0) return "";
   r = Math.min(r, w / 2, h);
@@ -1076,7 +1076,7 @@ function table(head, rows, numeric = []) {
 
 
 
-// ---------- 安全检查（现在这台电脑上看得到的事实） ----------
+// ---------- Safety check (facts visible on this computer right now) ----------
 function renderSecurity() {
   const csp = chrome.runtime.getManifest().content_security_policy?.extension_pages || "";
   const connect = (csp.match(/connect-src ([^;]+)/) || [])[1] || "";
@@ -1107,7 +1107,7 @@ function icon(ok) {
   return svg;
 }
 
-// ---------- 导出 ----------
+// ---------- Export ----------
 function inRange(list, key) {
   const days = RANGE_DAYS;
   const since = Date.now() - days * 86400000;
@@ -1118,7 +1118,7 @@ function renderExportCount() {
   const m = inRange(DATA.activity.log, (x) => x.time).length;
   $("exportCount").textContent = tr(`这个范围：${n} 条草稿 · ${m} 条 AI 活动纪录`, `In this range: ${n} drafts · ${m} AI activity records`);
 }
-// 设定 → 语言：English（默认）/ 中文 / 跟浏览器（存在 chrome.storage.local 的 ui_lang）
+// Settings, Language: English (default) / Chinese / Same as browser (stored as ui_lang in chrome.storage.local)
 function renderLangSeg() {
   const pref = typeof getUiLangPref === "function" ? getUiLangPref() : "en";
   ROOT.querySelectorAll("#langSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === pref)));
@@ -1128,11 +1128,11 @@ renderLangSeg();
 ROOT.querySelectorAll("#langSeg button").forEach((b) => b.addEventListener("click", async () => {
   try { await chrome.storage.local.set({ ui_lang: b.dataset.lang }); } catch (_) {}
   renderLangSeg();
-  // 换语言：WhatsApp 里的仪表板会自己重新打开（sidebar.js）；独立分页就重新载入
+  // Language change: the dashboard inside WhatsApp reopens itself (sidebar.js); a standalone tab reloads
   if (!EMBED) location.reload();
 }));
 
-// 设定 → 自动「不用回」：超过 X 天（0 = 关）
+// Settings, auto "No reply needed": after X days (0 = off)
 async function renderAutoSeg() {
   let d = 0;
   try { d = Number((await chrome.storage.local.get("auto_ignore_days")).auto_ignore_days) || 0; } catch (_) {}
@@ -1142,10 +1142,10 @@ renderAutoSeg();
 ROOT.querySelectorAll("#autoSeg button").forEach((b) => b.addEventListener("click", async () => {
   try { await chrome.storage.local.set({ auto_ignore_days: Number(b.dataset.days) || 0 }); } catch (_) {}
   renderAutoSeg();
-  setTimeout(load, 1500); // 索引更新后重新读
+  setTimeout(load, 1500); // re-read after the index updates
 }));
 
-// 时间范围：三个按钮（不用下拉选单，样式在 WhatsApp 页面里比较稳）
+// Time range: three buttons (no dropdown; its styling is more stable inside the WhatsApp page)
 let RANGE_DAYS = 30;
 ROOT.querySelectorAll("#range button").forEach((b) => b.addEventListener("click", () => {
   RANGE_DAYS = Number(b.dataset.days) || 30;
@@ -1155,10 +1155,10 @@ ROOT.querySelectorAll("#range button").forEach((b) => b.addEventListener("click"
 
 const csvCell = (v) => {
   const t = v == null ? "" : String(v);
-  // 防止试算表把信息当公式：开头（略过空白和看不见的字元）是 = + - @ | 或 Tab / 换行，前面加 '
+  // Stop spreadsheets treating messages as formulas: if it starts (skipping spaces and invisible characters) with = + - @ | or Tab / newline, prefix '
   const lead = t.replace(/^[\s\u0000-\u001f\u00a0\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]+/, "");
   const safe = /^[=+\-@|\t\r\n]/.test(lead) || /^[=+\-@\t\r]/.test(t) ? "'" + t : t;
-  // 每一格都加引号：不管试算表用逗号、分号还是 Tab 分隔，内容都不会被拆成新的一格
+  // Quote every cell: whether the spreadsheet splits on comma, semicolon or Tab, the content never breaks into a new cell
   return `"${safe.replace(/"/g, '""')}"`;
 };
 const toCsv = (head, rows) => "﻿" + [head, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n");
@@ -1214,10 +1214,10 @@ ROOT.querySelectorAll("[data-export]").forEach((b) => b.addEventListener("click"
   }
 }));
 
-// 对话时间线：有草稿的对话，信息按时间排序。只记事实（什么时候、谁、写了什么），不判断哪条算「回复草稿」。
-// - 你发出的每一条都在（不管是不是用草稿），每条都有时间
-// - 勾「包含 AI 草稿」→ 草稿放在它建立的时间点（原本打算填进输入框的位置）
-// - WhatsApp 读不到的旧信息，用草稿当时记下的「实际回复」补上
+// Chat timeline: for chats with drafts, messages in time order. Facts only (when, who, what was written); does not judge which one "replied to the draft".
+// - Every message you sent is included (draft or not), each with its time
+// - With "Include AI drafts" ticked, each draft sits at the time it was made (where it was meant to go into the message box)
+// - Old messages WhatsApp can no longer read are filled in from the "actual reply" the draft recorded at the time
 async function exportTimeline(rows) {
   const withDrafts = $("optDrafts").checked;
   const withTheirs = $("optTheirs").checked;
@@ -1240,7 +1240,7 @@ async function exportTimeline(rows) {
     items.push({ time: m.time, chat_id: m.chat_id, chat_name: names.get(m.chat_id) || m.chat_name, kind: m.from_me ? "sent" : "received",
       sender: m.from_me ? tr("我", "Me") : m.sender || "", msg_type: m.type || "chat", text: m.text || "", message_id: m.id || "" });
   }
-  // 补：草稿记下的实际回复（WhatsApp 现在读不到时）
+  // Fill in: actual replies recorded by drafts (when WhatsApp cannot read them now)
   for (const { d } of rows) {
     for (const m of actualOf(d)) {
       if (!m.time || m.time < since) continue;
@@ -1256,7 +1256,7 @@ async function exportTimeline(rows) {
         text: d.text, draft_id: d.id, draft_status: d.status, filled_at: d.inserted_at || "", copied_at: d.copied_at || "", dismissed_at: d.dismissed_at || "" });
     }
   }
-  // 时间顺序；同一秒时：先收到，再草稿，再我发出
+  // Time order; within the same second: received first, then draft, then sent by me
   const order = { received: 0, ai_draft: 1, sent: 2 };
   items.sort((x, y) => x.time.localeCompare(y.time) || order[x.kind] - order[y.kind]);
   const KIND = { received: tr("收到", "Received"), sent: tr("我发出", "You sent"), ai_draft: tr("AI 草稿（没有发送）", "AI draft (not sent)") };
@@ -1271,7 +1271,7 @@ async function exportTimeline(rows) {
 }
 
 
-// ---------- 嵌在 WhatsApp 里（由 sidebar.js 挂进 closed shadow DOM）----------
+// ---------- Embedded in WhatsApp (mounted into a closed shadow DOM by sidebar.js) ----------
 function closeEmbed() { if (typeof OPTS.onClose === "function") OPTS.onClose(); }
 if (EMBED) {
   $("close").hidden = false;
@@ -1291,6 +1291,6 @@ return { destroy() { chrome.storage.onChanged.removeListener(onStore); clearTime
 }
 
 globalThis.__waAssistantDashboard = { mount };
-// 独立分页（dashboard.html）：直接挂在 document
+// Standalone tab (dashboard.html): mount directly on document
 if (location.protocol === "chrome-extension:" && document.getElementById("v-overview")) mount(document, {});
 })();

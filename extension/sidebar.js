@@ -1,10 +1,10 @@
-// WhatsApp 页面左边侧栏加一个「AI+」图示（放在 Meta AI 正下方），点了打开整页仪表板。
-// - 不改 WhatsApp 自己的画面结构：图示和仪表板都挂在 <body> 外层的 closed shadow DOM，用位置对齐侧栏
-// - 仪表板不用 iframe：WhatsApp 网页有 Cross-Origin-Embedder-Policy: require-corp，iframe 会被 Chrome 挡掉
-//   （「拒绝连线」）。改成把仪表板画面放进另一层 closed shadow DOM，WhatsApp 网页读不到里面
-// - 侧栏还没载入 / 找不到 → 不显示图示（插件弹窗的柱状图按钮也能打开仪表板）
+// Adds an "AI+" icon to WhatsApp's left sidebar (right below Meta AI); clicking it opens the full-page dashboard.
+// - Does not change WhatsApp's own page structure: icon and dashboard live in a closed shadow DOM outside <body>, aligned to the sidebar by position
+// - Dashboard does not use an iframe: WhatsApp Web sends Cross-Origin-Embedder-Policy: require-corp, so Chrome blocks the iframe
+//   ("refused to connect"). Instead the dashboard goes into another closed shadow DOM layer, which WhatsApp Web cannot read
+// - Sidebar not loaded yet / not found: no icon (the bar-chart button in the extension popup also opens the dashboard)
 (() => {
-  // 插件更新后会再放一份进来：先把旧的那份拿掉
+  // After an extension update another copy gets injected: remove the old one first
   document.querySelectorAll("[data-wa-assistant-nav]").forEach((n) => n.remove());
 
   const host = document.createElement("div");
@@ -20,7 +20,7 @@
 .btn:hover { background: rgba(11,20,26,.08); }
 .btn:focus-visible { outline: 2px solid #00a884; outline-offset: 2px; }
 .btn.on, .btn.on:hover { background: transparent; }
-/* 打开时：侧栏最左边一条短短的黄色竖线（AI+ 的黄色），不加底色 */
+/* When open: a short yellow vertical bar (AI+ yellow) at the sidebar's far left, no background fill */
 .tab { position: fixed; display: none; width: 4px; border-radius: 0 3px 3px 0; background: #f5c83b; pointer-events: none; z-index: 2; }
 .tab.show { display: block; }
 .count { position: absolute; top: 1px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
@@ -54,10 +54,10 @@
   const countEl = root.getElementById("count");
   let open = false;
   let railRight = 0;
-  let dash = null;      // mount() 回传的东西
-  let assets = null;    // 仪表板的 HTML / CSS（向背景程序拿一次）
+  let dash = null;      // what mount() returns
+  let assets = null;    // dashboard HTML / CSS (fetched once from the background script)
 
-  // 找左边侧栏：从画面最左边那一条，由上往下点名，收集一个个图示按钮
+  // Find the left sidebar: scan the leftmost strip of the screen top to bottom and collect each icon button
   function railItems() {
     const seen = new Set();
     const items = [];
@@ -83,7 +83,7 @@
   function findRail() {
     const items = railItems();
     if (items.length < 3) return null;
-    // 上面一组（聊天、通话、动态、频道、社群、Meta AI）：画面上半部、彼此靠近的那些
+    // Top group (Chats, Calls, Status, Channels, Communities, Meta AI): the ones in the top half, close together
     const top = [];
     for (const it of items) {
       if (it.r.top > innerHeight * 0.6) break;
@@ -91,16 +91,16 @@
       top.push(it);
     }
     if (top.length < 2) return null;
-    const last = top[top.length - 1]; // 通常是 Meta AI
-    // 间距：取上面这组图示之间最常见的空隙
+    const last = top[top.length - 1]; // usually Meta AI
+    // Spacing: the most common gap between icons in the top group
     const gaps = [];
     for (let i = 1; i < top.length; i++) gaps.push(Math.round(top[i].r.top - top[i - 1].r.bottom));
     gaps.sort((a, b) => a - b);
     const gap = Math.max(4, Math.min(24, gaps[Math.floor(gaps.length / 2)] ?? 8));
-    // 侧栏右边界：图示所在、又高又窄的那一层
+    // Sidebar right edge: the tall, narrow layer that holds the icons
     let right = Math.max(...items.map((it) => it.r.right)) + 8;
-    // 往上找：最宽的那一层「又高又窄、贴着画面左边」的就是整条侧栏（里面可能还有一层较窄的，不能停在那层，
-    // 不然仪表板会盖住侧栏右边）；宽到 200px 以上就是主画面了，停
+    // Walk up: the widest "tall, narrow, touching the left edge" layer is the whole sidebar (a narrower one may sit inside; do not stop there,
+    // or the dashboard covers the sidebar's right side); 200px or wider is the main view, so stop
     let el = last.c;
     for (let i = 0; i < 14 && el && el !== document.body; i++, el = el.parentElement) {
       const r = el.getBoundingClientRect();
@@ -114,14 +114,14 @@
     const rail = findRail();
     if (rail) {
       const a = rail.anchor;
-      const size = Math.round(Math.max(36, Math.min(40, a.width - 8))); // 留空，高亮的圆不碰侧栏右边
+      const size = Math.round(Math.max(36, Math.min(40, a.width - 8))); // leave room so the highlight circle does not touch the sidebar's right edge
       btn.style.width = btn.style.height = size + "px";
       btn.style.left = Math.round(a.left + (a.width - size) / 2) + "px";
       btn.style.top = Math.round(a.bottom + rail.gap) + "px";
       btn.style.bottom = "";
       railRight = Math.round(rail.right);
     } else {
-      // 侧栏还没载入（或 WhatsApp 改版找不到）→ 先不显示图示；插件弹窗里也能打开仪表板
+      // Sidebar not loaded yet (or not found after a WhatsApp redesign): no icon for now; the extension popup can also open the dashboard
       btn.classList.remove("show");
       if (!open) return;
       railRight = 0;
@@ -130,7 +130,7 @@
     }
     btn.classList.add("show");
     panel.style.left = railRight + "px";
-    // 黄色竖线：贴着侧栏最左边，跟按钮垂直置中
+    // Yellow vertical bar: at the sidebar's far left, vertically centred on the button
     const br = btn.getBoundingClientRect();
     const h = Math.round(br.height * 0.6);
     tab.style.left = "0px";
@@ -142,7 +142,7 @@
   async function showDashboard() {
     panel.replaceChildren(Object.assign(document.createElement("div"), { className: "loading", textContent: tr("载入中…", "Loading…") }));
     panel.classList.add("show");
-    // 插件重新载入 / 更新后，这一页的旧程序跟插件断线了
+    // After the extension is reloaded / updated, this page's old script has lost its link to the extension
     if (!chrome.runtime?.id) {
       panel.firstChild.textContent = tr("插件刚更新过，这一页跟插件断线了。请重新整理 WhatsApp 页面（⌘R / Ctrl+R）。", "The extension was just updated, so this page lost its connection. Reload WhatsApp (⌘R / Ctrl+R).");
       return;
@@ -160,7 +160,7 @@
       return;
     }
     if (!open) return;
-    // 第二层 closed shadow DOM：仪表板的样式不会影响 WhatsApp，WhatsApp 也读不到里面
+    // Second closed shadow DOM layer: dashboard styles do not affect WhatsApp, and WhatsApp cannot read inside
     const box = document.createElement("div");
     box.style.cssText = "position:absolute;inset:0;";
     const sr = box.attachShadow({ mode: "closed" });
@@ -207,12 +207,12 @@
   btn.addEventListener("mouseleave", () => tip.classList.remove("show"));
 
   document.addEventListener("keydown", (e) => { if (open && e.key === "Escape") setOpen(false); }, true);
-  // 点侧栏其他图示（聊天、动态…）→ 关掉仪表板，回到 WhatsApp
+  // Clicking another sidebar icon (Chats, Status…) closes the dashboard and returns to WhatsApp
   document.addEventListener("pointerdown", (e) => {
     if (open && e.isTrusted && e.clientX < railRight && !e.composedPath().includes(host)) setOpen(false);
   }, true);
 
-  // 图示上的数字：还没用的 AI 草稿（近 7 天、还没回、没按「不用了」）
+  // Number on the icon: unused AI drafts (last 7 days, not replied yet, not dismissed with "Not needed")
   async function updateCount() {
     if (!chrome.runtime?.id) { countEl.classList.remove("show"); return; }
     let n = 0;
@@ -232,21 +232,21 @@
     chrome.storage.onChanged.addListener((c, area) => {
       if (area !== "local") return;
       if (c.drafts) updateCount();
-      // 换了语言：重新打开仪表板，画面整个换成新语言
+      // Language changed: reopen the dashboard so the whole view switches to the new language
       if (c.ui_lang) { updateCount(); if (open) { setOpen(false); setTimeout(() => setOpen(true), 50); } }
     });
   } catch (_) {}
   updateCount();
 
-  // 插件弹窗按「仪表板」→ 在这里打开
+  // "Dashboard" pressed in the extension popup: open it here
   try {
     chrome.runtime.onMessage.addListener((m, sender) => {
       if (sender.id === chrome.runtime.id && m?.type === "open_panel" && !open) setOpen(true);
-      // 打开草稿的对话时：仪表板开着会盖住对话，先收起来
+      // When opening a draft's chat: an open dashboard would cover the chat, so close it first
       if (sender.id === chrome.runtime.id && m?.type === "close_panel" && open) setOpen(false);
     });
   } catch (_) {}
-  // 弹窗要求打开、但那时 WhatsApp 还没载入：侧栏出现后自动打开（2 分钟内有效）
+  // Popup asked to open it but WhatsApp had not loaded yet: open automatically once the sidebar appears (valid for 2 minutes)
   let pendingChecked = false;
   async function maybeOpenPending() {
     if (pendingChecked || !btn.classList.contains("show") || !chrome.runtime?.id) return;
@@ -256,7 +256,7 @@
   }
 
   const tick = setInterval(() => {
-    // 插件被重新载入了：这一份已经没用，收起来（新的那份会接手）
+    // Extension was reloaded: this copy is no longer used, so shut it down (the new copy takes over)
     if (!chrome.runtime?.id) { clearInterval(tick); if (!open) host.remove(); return; }
     if (!document.hidden) { place(); maybeOpenPending(); }
   }, 1000);

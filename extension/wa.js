@@ -1,15 +1,15 @@
-// 找到用户已开的 WhatsApp Web 分页，在里面执行只读读取器。
-// 不开新分页、不重新整理页面。
+// Find the WhatsApp Web tab the user already has open and run the read-only reader in it.
+// Does not open a new tab or reload the page.
 import { readWhatsApp } from "./reader.js";
 import { openChatInPage } from "./actions.js";
 
 export async function findWhatsAppTab(includeAsleep = false) {
-  // 无痕视窗不算（插件设成不在无痕视窗执行；万一被打开也不混两个账号）
+  // Incognito windows do not count (the extension is set not to run in incognito; if it ever does, never mix two accounts)
   let tabs = (await chrome.tabs.query({ url: "https://web.whatsapp.com/*" })).filter((t) => !t.incognito);
-  // Chrome 重新打开后，上次的分页可能是「睡着」的（没载入），在里面执行会一直卡住
+  // After Chrome reopens, old tabs may be "asleep" (not loaded); running code in them hangs
   if (!includeAsleep) tabs = tabs.filter((t) => !t.discarded && t.status !== "unloaded");
   if (!tabs.length) return null;
-  // 多个分页时，优先用最近用过的那个
+  // With several tabs, prefer the most recently used one
   tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
   return tabs[0];
 }
@@ -21,7 +21,7 @@ async function exec(tabId, func, args) {
 
 export const runRead = (op, params, tabId) => runInWa(readWhatsApp, [op, params || {}], 10000, tabId);
 
-// 在 WhatsApp 分页里执行一个自给自足的函数
+// Run a self-contained function inside the WhatsApp tab
 export async function runInWa(func, args, ms, tabId) {
   const id = tabId ?? (await findWhatsAppTab())?.id;
   if (id == null) {
@@ -31,7 +31,7 @@ export async function runInWa(func, args, ms, tabId) {
       : { ok: false, code: "WA_TAB_NOT_OPEN", reason: tr("WhatsApp Web 没开：请在 Chrome 打开 web.whatsapp.com 并登入", "WhatsApp Web is not open: open web.whatsapp.com in Chrome and log in") };
   }
   try {
-    // 最多等这么久，不要一直卡住
+    // Wait at most this long; never hang
     const timeout = new Promise((resolve) => setTimeout(() => resolve({ ok: false, code: "WA_TIMEOUT", reason: tr("WhatsApp Web 太久没回应（可能还在载入）。等一下再试", "WhatsApp Web took too long to answer (it may still be loading). Try again in a moment") }), ms));
     const r = await Promise.race([exec(id, func, args), timeout]);
     if (func !== readWhatsApp && r?.ok) r.tabId = id;
@@ -42,7 +42,7 @@ export async function runInWa(func, args, ms, tabId) {
   }
 }
 
-// 只给「用户亲手点打开对话」用。打开后把 WhatsApp 分页切到前面。
+// Only for "open chat" clicked by the user. After opening, bring the WhatsApp tab to the front.
 export async function openChat(chatId, tabId) {
   const tab = tabId != null ? await chrome.tabs.get(tabId).catch(() => null) : await findWhatsAppTab();
   if (!tab) return { ok: false, reason: tr("WhatsApp Web 没开", "WhatsApp Web is not open") };
@@ -60,7 +60,7 @@ export async function openChat(chatId, tabId) {
   return r || { ok: false, reason: tr("没有回应", "No response") };
 }
 
-// 弹窗「打开 WhatsApp Web」：有分页就切过去（睡着的也叫醒），没有就开一个
+// Popup "Open WhatsApp Web": switch to an existing tab (waking it if asleep), or open one if none
 export async function focusOrOpenWhatsApp() {
   const tab = await findWhatsAppTab(true);
   if (!tab) { await chrome.tabs.create({ url: "https://web.whatsapp.com/" }); return { ok: true }; }

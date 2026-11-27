@@ -1,21 +1,21 @@
-// 插件和本机程序互相证明身份（协定 v3）。插件和测试都用这个文件；只用 WebCrypto 和 spake2.js。
+// The extension and the local program prove their identity to each other (protocol v3). The extension and the tests both use this file; it uses only WebCrypto and spake2.js.
 //
-// 已配对（打招呼）：
-//   插件 → hello {v:3, ne}                     ne = 32 bytes 随机
-//   程序 → hello_auth {v:3, ns, proof}         proof = HMAC(secret, "wa-srv|port|ne|ns")
-//   插件验证 proof（port = 插件自己连的端口）→ auth {proof: HMAC(secret, "wa-ext|port|ne|ns")}
-//   程序验证 → hello_ok。密钥本身永远不在线路上传；port 绑在证明里，别的程序转发也没用。
+// Already paired (handshake):
+//   extension → hello {v:3, ne}                ne = 32 random bytes
+//   program → hello_auth {v:3, ns, proof}      proof = HMAC(secret, "wa-srv|port|ne|ns")
+//   extension checks proof (port = the port the extension itself connected to) → auth {proof: HMAC(secret, "wa-ext|port|ne|ns")}
+//   program checks → hello_ok. The secret itself never goes over the wire; port is bound into the proof, so relaying through another program does not help.
 //
-// 第一次配对（6 位数配对码，不会在线路上传）：SPAKE2（RFC 9382，P-256）
-//   w = SHA-256("wa-pair-w|3|port|配对码") mod n
-//   插件 → pair_start {v:3, ne, pa}            pa = x·G + w·M
-//   程序 → pair_srv {ns, pb, mac}              pb = y·G + w·N；K = y·(pa − w·M)
-//                                              h = SHA-256(port、ne、ns、pa、pb、K、w)；mac = HMAC(h, "srv")
-//   插件算 K = x·(pb − w·N)，验证 mac（码不对 / 假程序 → 不一样，停）→ pair_ext {mac: HMAC(h, "ext")}
-//   程序验证 → paired {iv, ct}：密钥用 h 导出的金钥加密（HKDF + AES-GCM）
-//   每一次尝试只能猜一个码（录下所有资料也没办法离线猜），所以 6 位数就够：
-//   程序只在 AI 刚给码后 3 分钟内接受配对，同一个码最多试 5 次就换，每次启动最多 12 次，成功后关掉。
-//   被猜中的机会：每次启动最多 12 / 1,000,000。
+// First pairing (6-digit pairing code, never sent over the wire): SPAKE2 (RFC 9382, P-256)
+//   w = SHA-256("wa-pair-w|3|port|pairing code") mod n
+//   extension → pair_start {v:3, ne, pa}       pa = x·G + w·M
+//   program → pair_srv {ns, pb, mac}           pb = y·G + w·N; K = y·(pa − w·M)
+//                                              h = SHA-256(port, ne, ns, pa, pb, K, w); mac = HMAC(h, "srv")
+//   extension computes K = x·(pb − w·N), checks mac (wrong code / fake program → mismatch, stop) → pair_ext {mac: HMAC(h, "ext")}
+//   program checks → paired {iv, ct}: the secret is encrypted with a key derived from h (HKDF + AES-GCM)
+//   Each attempt can guess only one code (even a full recording does not allow offline guessing), so 6 digits are enough:
+//   the program accepts pairing only within 3 minutes after the AI gives the code, changes the code after 5 tries, allows at most 12 tries per start, and closes after success.
+//   Chance of a correct guess: at most 12 / 1,000,000 per start.
 import { spakeStart, spakeFinish, scalar, wBytes } from "./spake2.js";
 const enc = new TextEncoder();
 export const CODE_DIGITS = 6;
@@ -31,7 +31,7 @@ async function hmac(keyBytes, text) {
   const k = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(text)));
 }
-// 比较时间不随内容变
+// Constant-time comparison (time does not depend on content)
 export function sameBytes(a, b) {
   if (!(a instanceof Uint8Array) || !(b instanceof Uint8Array) || a.length !== b.length) return false;
   let d = 0;
@@ -50,13 +50,13 @@ export const pakeW = async (port, code) => scalar(await sha(`wa-pair-w|3|${port}
 async function transcript(port, ne, ns, pa, pb, k, w) {
   return sha(`wa-pair|3|${port}|${ne}|${ns}|${pa}|${pb}|${b64(k)}|${hex(wBytes(w))}`);
 }
-// 插件这边：开始配对
+// Extension side: start pairing
 export async function extStart(port, code) {
   const w = await pakeW(port, code);
   const { x, pub } = spakeStart("A", w, rand(48));
   return { port, w, x, ne: b64(rand(32)), pa: b64(pub) };
 }
-// 插件这边：收到 pair_srv。码对、程序是真的 → { ok, mac, h }；不然 { ok: false }
+// Extension side: got pair_srv. Right code and genuine program → { ok, mac, h }; otherwise { ok: false }
 export async function extFinish(st, ns, pb, mac) {
   let k;
   try { k = spakeFinish("A", st.x, st.w, unb64(pb)); } catch (_) { return { ok: false }; }
