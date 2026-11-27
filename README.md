@@ -13,7 +13,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 > **Unofficial.** Not affiliated with, endorsed or sponsored by WhatsApp or Meta. "WhatsApp" is used only to say which website this works with. WhatsApp's terms limit automated access, so try it with a spare or work number first.
 
-[中文说明](#中文说明) · [Install](#install) · [Tools](#mcp-tools) · [Security](#security-design) · [FAQ](#faq) · [Test cases](#test-cases) · [Privacy](PRIVACY.md)
+[中文说明](#中文说明) · [Compatibility](#compatibility) · [Install](#install) · [Tools](#mcp-tools) · [Security](#security-design) · [FAQ](#faq) · [Test cases](#test-cases) · [Privacy](PRIVACY.md)
 
 ---
 
@@ -40,14 +40,17 @@ Most WhatsApp MCP servers log in as a new linked device and include a "send mess
 | Outside servers, analytics | **None** | Varies |
 | Dependencies | **0** (hand-written MCP + WebSocket) | Many |
 
-## Works with
+## Compatibility
 
-| AI app | How | Status |
-|---|---|---|
-| Claude Desktop | `aiforbusiness-chat-assistant.mcpb` desktop extension | Works |
-| Claude Code | Plugin marketplace in this repo | Works |
-| ChatGPT desktop / Codex | Plugin marketplace in this repo | Works |
-| Any MCP client | `node plugins/aiforbusiness-chat-assistant/server/server.js` over stdio | Works |
+| App | Mode | Works | How |
+|---|---|:---:|---|
+| Claude Desktop | Chat | ✅ | `aiforbusiness-chat-assistant.mcpb` desktop extension |
+| Claude Code | CLI / desktop | ✅ | Plugin marketplace in this repo |
+| ChatGPT desktop | **Work** | ✅ | Plugin marketplace in this repo (installed through Codex) |
+| ChatGPT desktop | **Chat** | ❌ | Chat mode can't use local plugins. Switch to Work |
+| Codex | CLI / desktop | ✅ | Plugin marketplace in this repo |
+| Claude or ChatGPT on the web or phone | — | ❌ | They can't reach a program on your computer |
+| Any other MCP client | stdio | ✅ | `node plugins/aiforbusiness-chat-assistant/server/server.js` |
 
 Needs Google Chrome (version 116 or newer), WhatsApp Web logged in, and Node.js 18 or newer. Runs on macOS and Windows.
 
@@ -180,6 +183,14 @@ CHROMIUM_PATH=/path/to/chromium node --test tests/download.e2e.mjs
 | `.claude-plugin/`, `.agents/plugins/` | Plugin marketplaces for Claude Code and Codex |
 | `tests/` | Automated tests |
 | `docs/` | Install guide, architecture, store listing text |
+
+## Making a release
+
+```bash
+sh scripts/release.sh
+```
+
+It checks that every version number matches, runs the tests, builds `dist/aiforbusiness-chat-assistant.mcpb` and the release zip, tags `v<version>`, pushes the tag and publishes a GitHub Release with both files and `SHA256SUMS.txt`. Add `--dry-run` to build and check without tagging or publishing. Bump the version in all manifests first.
 
 ## Contributing
 
