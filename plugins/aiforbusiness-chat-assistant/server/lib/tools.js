@@ -71,7 +71,7 @@ export const TOOLS = [
   {
     name: "get_messages",
     title: "Read recent messages in a chat",
-    description: RO + "Read the latest N messages of a chat (N up to 100). chat can be a chat name (partial match) or an id from list_chats; if several names match, candidates are returned to choose from. Only reads messages already stored on this computer and never opens the chat, so older messages may be missing (the result says so). Non-text messages are included too: photos, videos, stickers, files and voice messages come with a media block (file name, size, length), and location, contact, poll, event and call messages with their details. To look at a photo or file, pass the message id to get_media." + UNTRUSTED,
+    description: RO + "Use whenever the user mentions a person, customer or group by name, asks whether someone replied, or wants to reply to someone. Read the latest N messages of a chat (N up to 100). chat can be a chat name (partial match) or an id from list_chats; if several names match, candidates are returned to choose from. Only reads messages already stored on this computer and never opens the chat, so older messages may be missing (the result says so). Non-text messages are included too: photos, videos, stickers, files and voice messages come with a media block (file name, size, length), and location, contact, poll, event and call messages with their details. To look at a photo or file, pass the message id to get_media." + UNTRUSTED,
     inputSchema: {
       type: "object",
       properties: {
@@ -113,7 +113,7 @@ export const TOOLS = [
   {
     name: "search_messages",
     title: "Search WhatsApp messages",
-    description: RO + "Search messages stored on this computer for a keyword (case-insensitive), including captions, file names, places, contact names and polls. Returns matching messages and their chats, newest first." + UNTRUSTED,
+    description: RO + "Use to find who mentioned something (an order, invoice, payment, price, place or date) when you do not know the chat. Search messages stored on this computer for a keyword (case-insensitive), including captions, file names, places, contact names and polls. Returns matching messages and their chats, newest first." + UNTRUSTED,
     inputSchema: {
       type: "object",
       properties: {
@@ -128,7 +128,7 @@ export const TOOLS = [
   {
     name: "list_awaiting_reply",
     title: "Who is waiting for my reply",
-    description: RO + "List chats where the other person spoke last and the user has not replied (excludes official accounts and archived chats), with their last message and how many hours they have waited. Chats with no stored messages cannot be judged and are reported as a count (unknown_chats). Chats the user marked \"No reply needed\" are left out by default (reported as ignored_by_user)." + UNTRUSTED,
+    description: RO + "Start here when the user asks what needs attention, who to reply to, what they missed, or about follow-ups, new leads, customers or orders. List chats where the other person spoke last and the user has not replied (excludes official accounts and archived chats), with their last message and how many hours they have waited. Chats with no stored messages cannot be judged and are reported as a count (unknown_chats). Chats the user marked \"No reply needed\" are left out by default (reported as ignored_by_user)." + UNTRUSTED,
     inputSchema: {
       type: "object",
       properties: {
@@ -145,7 +145,7 @@ export const TOOLS = [
     name: "save_draft",
     title: "Save a reply draft (not sent)",
     readOnly: false,
-    description: "[Never sends] Save your drafted reply to the draft list in the user's Chrome extension. When the user opens that chat in WhatsApp, a preview card appears above the message box; the user decides whether to fill it in and presses send themselves. Only writes the draft list; never touches WhatsApp. Read the chat with get_messages before drafting. A new draft for the same chat replaces the older unused one.",
+    description: "[Never sends] Use whenever you have written a reply the user would send on WhatsApp; saving is safe and nothing is sent, so do not ask before saving. Save your drafted reply to the draft list in the user's Chrome extension. When the user opens that chat in WhatsApp, a preview card appears above the message box; the user decides whether to fill it in and presses send themselves. Only writes the draft list; never touches WhatsApp. Read the chat with get_messages before drafting. A new draft for the same chat replaces the older unused one.",
     inputSchema: {
       type: "object",
       properties: {

@@ -248,6 +248,30 @@ test("download_media end to end", { skip: !CHROMIUM && "no Chromium for testing"
       writeFileSync(process.env.E2E_SHOT, Buffer.from((await send(2, "Page.captureScreenshot", { format: "png" })).data, "base64")); ws.close();
     }
     assert.ok(dash.buttons.every((t) => !/^(open|打开)/i.test(t)), "no open button");
+    // a new AI draft is the first thing on the Overview, highlighted
+    const saved = await a.call("save_draft", { chat: "111@c.us", text: "Thanks, got the files. I'll check them and reply by tonight." });
+    assert.equal(saved.ok, true, JSON.stringify(saved));
+    const ov = await evalIn(`chrome-extension://${ID}/dashboard.html`, `(async () => {
+      location.hash = "overview"; document.getElementById("refresh").click();
+      const c = document.getElementById("newDraftsCard");
+      for (let i = 0; i < 40 && c.hidden; i++) await new Promise((r) => setTimeout(r, 250));
+      const li = c.querySelector("li.is-new");
+      return { shown: !c.hidden, first: c.parentElement.firstElementChild === c, items: c.querySelectorAll("li.is-new").length, tag: c.querySelector(".tag.new")?.textContent,
+        text: c.querySelector(".draft-full")?.textContent, open: !!c.querySelector(".open-btn"), bg: li ? getComputedStyle(li).backgroundColor : null };
+    })()`);
+    step(JSON.stringify(ov));
+    assert.ok(ov.shown && ov.first, "new drafts card is shown first on the Overview");
+    assert.equal(ov.items, 1); assert.equal(ov.tag, "New"); assert.ok(ov.open);
+    assert.match(ov.text, /reply by tonight/);
+    assert.equal(ov.bg, "rgb(255, 243, 196)", "new draft has the highlight background");
+    if (process.env.E2E_SHOT_OVERVIEW) {
+      const t = (await (await fetch(http + "/json")).json()).find((x) => x.url.startsWith(`chrome-extension://${ID}/dashboard.html`));
+      const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => (ws.onopen = r));
+      const send = (id, method, params) => new Promise((r) => { ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id === id) r(m.result); }); ws.send(JSON.stringify({ id, method, params })); });
+      await send(1, "Emulation.setDeviceMetricsOverride", { width: 1100, height: 900, deviceScaleFactor: 1, mobile: false });
+      await sleep(400);
+      writeFileSync(process.env.E2E_SHOT_OVERVIEW, Buffer.from((await send(2, "Page.captureScreenshot", { format: "png" })).data, "base64")); ws.close();
+    }
     // "My data": every clear asks first (real mouse clicks; a script click is not accepted), Cancel keeps everything
     {
       const t = (await (await fetch(http + "/json")).json()).find((x) => x.url.startsWith(`chrome-extension://${ID}/dashboard.html`));

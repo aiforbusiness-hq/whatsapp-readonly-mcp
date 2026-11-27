@@ -152,10 +152,12 @@ function renderDrafts(kw) {
   const rows = state.drafts.filter((d) => !kw || d.chat_name.toLowerCase().includes(kw) || d.text.toLowerCase().includes(kw));
   if (!rows.length) return empty(state.drafts.length ? tr("没有符合的草稿", "No matching drafts") : tr("还没有 AI 草稿", "No AI drafts yet"), state.drafts.length ? "" : tr("在 Claude 或 ChatGPT 说「帮我起草回复给某某」，草稿会出现在这里和 WhatsApp 输入框上方。", "Ask Claude or ChatGPT \"draft a reply to …\". Drafts show up here and above the WhatsApp message box."));
   for (const d of rows) {
-    const li = el("li", "item");
+    // 新草稿：还没用、之后还没回、7 天内存的 → 淡黄底 + 「新」
+    const fresh = d.status === "pending" && !d.actual_reply && Date.now() - Date.parse(d.created_at) < 7 * 86400000;
+    const li = el("li", fresh ? "item new" : "item");
     const l1 = el("div", "line1");
     l1.append(el("span", "name", d.chat_name));
-    const [label, cls] = STATUS[d.status] || [d.status, ""];
+    const [label, cls] = fresh ? [tr("新", "New"), "new"] : STATUS[d.status] || [d.status, ""];
     l1.append(el("span", "tag " + cls, label), el("span", "time", ago(d.created_at)));
     const txt = el("div", "draft-text", d.text);
     txt.tabIndex = 0;

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "short_name": "__MSG_extShortName__",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "__MSG_extDescription__",
   "homepage_url": "https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtZ8ZwYhBtELsUy+ClYQdSYqL+98kpmXMii6Knux2lNSUoU9t2E0GHhS0XFghTYi86aTNh68ZnAUOISLJbLZmAZWCXrboUW7iueN0/9TtnO7cQzV4EAQQ1QqIRpsyzWSiUHaxhqooknW5QYvVgYyN31M1CLanMWhplK7914NosuGZ0goHbIXi1IQ9ltmgcJJeL/3mhb/b4dS11xFIoM8iK5F1OqpY8VhLL15QJ/p5CCaIkbnfZS+dRXQ5ssu4RC3g3Nrx52M1+XWqq+AQ3Ei7JP16pd19nQPeVbSStZuZnDsdApW6gj6WFRvD27gtVdXPmTH6uGHHsbM66cI/leYe+wIDAQAB",

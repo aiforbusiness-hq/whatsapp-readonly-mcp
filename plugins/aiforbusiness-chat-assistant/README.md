@@ -32,6 +32,10 @@ The first time, ask Claude "What's my WhatsApp status?". Claude shows a 6-digit 
 | `save_draft` | Save a reply draft (never sent) |
 | `list_drafts` | Drafts, and what you actually sent |
 
+## Works on its own
+
+You do not have to say "WhatsApp". Ask "who is waiting for my reply?", "did Aisha reply?" or "reply to Jason, say tomorrow is fine", and Claude reads the chats and saves reply drafts by itself. Drafts are never sent. The plugin's `read-and-draft-replies` skill and the server instructions tell Claude when to use the tools. New drafts show first on the extension's Overview page, highlighted in yellow.
+
 ## What it runs, sends and fetches
 
 - **Runs:** `node ${CLAUDE_PLUGIN_ROOT}/server/server.js`, a local MCP server over stdio. Plain, readable JavaScript with no dependencies and nothing installed from a registry.

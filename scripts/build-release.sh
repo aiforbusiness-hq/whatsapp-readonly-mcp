@@ -27,13 +27,14 @@ cp -R extension/_locales "$STAGE/extension/"
 cp dist/aiforbusiness-chat-assistant.mcpb "$STAGE/"
 cp docs/安装说明.md "$STAGE/安装说明.md"
 cp PRIVACY.md LICENSE "$STAGE/"
-# Claude Code / ChatGPT（Codex）插件：解压后的文件夹本身就是插件市场；插件本身只有设定、图示和本机程序
+# Claude Code / ChatGPT（Codex）插件：解压后的文件夹本身就是插件市场；插件本身只有设定、图示、技能（skills）和本机程序
 P=plugins/aiforbusiness-chat-assistant
 mkdir -p "$STAGE/.claude-plugin" "$STAGE/.agents/plugins" "$STAGE/$P/.claude-plugin" "$STAGE/$P/assets" "$STAGE/$P/server/lib"
 cp .claude-plugin/marketplace.json "$STAGE/.claude-plugin/"
 cp .agents/plugins/marketplace.json "$STAGE/.agents/plugins/"
 cp $P/.claude-plugin/plugin.json "$STAGE/$P/.claude-plugin/"
-cp $P/plugin.json $P/mcp.json "$STAGE/$P/"
+cp $P/plugin.json $P/mcp.json $P/README.md "$STAGE/$P/"
+cp -R $P/skills "$STAGE/$P/"
 cp $P/assets/icon.png "$STAGE/$P/assets/"
 cp $P/server/server.js $P/server/package.json "$STAGE/$P/server/"
 cp $P/server/lib/*.js "$STAGE/$P/server/lib/"

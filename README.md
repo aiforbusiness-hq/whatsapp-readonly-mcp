@@ -25,7 +25,7 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 - "Draft a polite reply to the last customer who asked about prices."
 - "Download the PDF in that message."
 
-The AI writes drafts. A draft appears above the WhatsApp message box, and **you** press send.
+You do not have to say "WhatsApp": the AI reads your chats and saves reply drafts on its own when a question is about messages, customers or replies. A draft appears above the WhatsApp message box and first on the extension's Overview page, and **you** press send.
 
 ## Why read-only
 
