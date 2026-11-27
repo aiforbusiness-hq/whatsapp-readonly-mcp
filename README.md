@@ -21,6 +21,15 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 ---
 
+## Why this exists
+
+For people who use AI every day and often need its help with WhatsApp: who is waiting for a reply, what a busy group said, a first draft of an answer. It is a convenience, not a way around WhatsApp.
+
+- **Read-only.** It never sends a message to anyone. Replies are saved as drafts, and you press send yourself.
+- **Not for spam or bulk messaging.** There is no send, broadcast, forward or auto-reply feature, and there never will be.
+- **Doesn't get around WhatsApp.** It reads the WhatsApp Web tab you already use, logged in as you. No new linked device, no unofficial account, no scraping of other people's chats.
+- **Only on your own computer.** It works only on the computer where your Claude or ChatGPT desktop app is open, with WhatsApp Web open in Chrome. Nothing runs in the cloud.
+
 ## What you can ask
 
 - "Who is waiting for my reply?"

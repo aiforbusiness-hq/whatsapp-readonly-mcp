@@ -4,6 +4,10 @@ Lets Claude read the WhatsApp Web chats you already have open in Google Chrome, 
 
 > Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.
 
+## Why this exists
+
+A convenience for people who use AI a lot and often need help with WhatsApp. Read-only: it never sends a message to anyone, has no bulk or auto-reply feature and is not for spam. It reads the WhatsApp Web tab you already use (no new linked device) and works only on the computer where your Claude or ChatGPT desktop app is open.
+
 ## Install
 
 ```
