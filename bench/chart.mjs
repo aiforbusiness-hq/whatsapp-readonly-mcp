@@ -10,7 +10,7 @@ const RES = join(ROOT, "bench/results");
 const files = process.argv.slice(2).length ? process.argv.slice(2) : readdirSync(RES).filter((f) => /^raw-.*\.jsonl$/.test(f)).map((f) => join(RES, f));
 const rows = files.flatMap((f) => readFileSync(f, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)));
 const median = (a) => { const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; };
-const METHODS = [["plugin", "This plugin (MCP)"], ["browser", "Browser automation"]];
+const METHODS = [["plugin", "This plugin (MCP)"], ["browser", "Playwright MCP"], ["chrome", "Claude in Chrome"]];
 const LABEL = { waiting: "Who is waiting?", "group-summary": "Summarise a group", "find-invoice": "Find a message" };
 
 const summary = { generated: new Date().toISOString(), runs: rows.length, models: [...new Set(rows.map((r) => r.model))], tasks: {} };
@@ -39,7 +39,7 @@ writeFileSync(join(RES, "summary.json"), JSON.stringify(summary, null, 2) + "\n"
 
 // --- SVG: two panels (time, tokens), one group per question, two bars each ---
 const W = 920, panelH = 250, pad = 16, labelW = 170, barH = 18, gap = 6, groupGap = 22;
-const COL = { plugin: "#f5c83b", browser: "#8696a0" };
+const COL = { plugin: "#f5c83b", browser: "#aebac1", chrome: "#54656f" };
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 const fmtK = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
 function panel(y0, title, key, fmt) {
@@ -49,7 +49,7 @@ function panel(y0, title, key, fmt) {
   let y = y0 + 34;
   for (const t of TASKS) {
     s += `<text x="${pad}" y="${y + barH + 4}" class="l">${esc(LABEL[t.id] || t.id)}</text>`;
-    for (const [m] of METHODS) {
+    for (const [m] of shown) {
       const v = summary.tasks[t.id][m]?.[key];
       if (v == null) { y += barH + gap; continue; }
       const w = Math.max(2, ((x1 - x0) * v) / max);
@@ -61,19 +61,20 @@ function panel(y0, title, key, fmt) {
   }
   return s;
 }
-const h1 = 34 + TASKS.length * (2 * (barH + gap) + groupGap - gap) + 10;
-const H = 70 + h1 * 2 + 40;
+const shown = METHODS.filter(([m]) => totals[m]);
+const h1 = 34 + TASKS.length * (shown.length * (barH + gap) + groupGap - gap) + 10;
+const H = 94 + h1 * 2 + 40;
 const tP = totals.plugin, tB = totals.browser;
 const ratio = (a, b) => (a && b ? (b / a).toFixed(1) + "×" : "");
+let lx = pad; const legend = shown.map(([m, label]) => { const g = `<rect x="${lx}" y="40" width="14" height="14" rx="3" fill="${COL[m]}"/><text x="${lx + 20}" y="52" class="s">${esc(label)}</text>`; lx += 40 + label.length * 7.2; return g; }).join("")
+  + (tP ? `<text x="${pad}" y="78" class="s" font-weight="600">This plugin, ${shown.filter(([m]) => m !== "plugin").map(([m, l]) => `vs ${l}: ${ratio(tP.seconds, totals[m].seconds)} faster, ${ratio(tP.tokens, totals[m].tokens)} fewer tokens`).join(" · ")}</text>` : "");
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <style>.h{font-size:16px;font-weight:700;fill:#111b21}.l{font-size:14px;fill:#3b4a54}.v{font-size:13px;font-weight:600;fill:#111b21}.s{font-size:13px;fill:#54656f}</style>
 <rect width="${W}" height="${H}" rx="14" fill="#ffffff" stroke="#e9edef"/>
-<text x="${pad}" y="28" class="h" font-size="18">Same questions, same made-up WhatsApp page (median of ${Math.round(rows.length / (TASKS.length * METHODS.length))} runs each)</text>
-<rect x="${pad}" y="40" width="14" height="14" rx="3" fill="${COL.plugin}"/><text x="${pad + 20}" y="52" class="s">This plugin (MCP)</text>
-<rect x="${pad + 160}" y="40" width="14" height="14" rx="3" fill="${COL.browser}"/><text x="${pad + 180}" y="52" class="s">Browser automation (Playwright MCP)</text>
-${tP && tB ? `<text x="${W - pad}" y="52" class="s" text-anchor="end">Overall: ${ratio(tP.seconds, tB.seconds)} faster, ${ratio(tP.tokens, tB.tokens)} fewer tokens</text>` : ""}
-${panel(64, "Time to answer (seconds, lower is better)", "median_seconds", (v) => v.toFixed(1) + " s")}
-${panel(64 + h1, "Tokens used (lower is better)", "median_tokens", fmtK)}
+<text x="${pad}" y="28" class="h" font-size="18">Same questions, same made-up WhatsApp page (median of ${Math.round(rows.length / (TASKS.length * shown.length))} runs each)</text>
+${legend}
+${panel(88, "Time to answer (seconds, lower is better)", "median_seconds", (v) => v.toFixed(1) + " s")}
+${panel(88 + h1, "Tokens used (lower is better)", "median_tokens", fmtK)}
 <text x="${pad}" y="${H - 14}" class="s">Model: ${esc(summary.models.join(", "))} · Claude Code CLI · raw runs in bench/results/</text>
 </svg>
 `;

@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-27T08:37:28.533Z",
-  "runs": 36,
+  "generated": "2026-11-27T09:01:40.865Z",
+  "runs": 54,
   "models": [
     "claude-opus-5-5"
   ],
@@ -21,6 +21,14 @@
         "median_tokens": 45851,
         "median_turns": 4,
         "median_cost_usd": 0.0495
+      },
+      "chrome": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 21.7,
+        "median_tokens": 64229,
+        "median_turns": 4.5,
+        "median_cost_usd": 0.0481
       }
     },
     "group-summary": {
@@ -39,6 +47,14 @@
         "median_tokens": 57660,
         "median_turns": 6,
         "median_cost_usd": 0.0458
+      },
+      "chrome": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 26.5,
+        "median_tokens": 99144,
+        "median_turns": 7,
+        "median_cost_usd": 0.0579
       }
     },
     "find-invoice": {
@@ -57,6 +73,14 @@
         "median_tokens": 76976,
         "median_turns": 7,
         "median_cost_usd": 0.054
+      },
+      "chrome": {
+        "runs": 6,
+        "correct": 6,
+        "median_seconds": 28.1,
+        "median_tokens": 116640,
+        "median_turns": 7.5,
+        "median_cost_usd": 0.0636
       }
     }
   },
@@ -70,6 +94,12 @@
     "browser": {
       "seconds": 64.5,
       "tokens": 180487,
+      "correct": 18,
+      "runs": 18
+    },
+    "chrome": {
+      "seconds": 76.3,
+      "tokens": 280013,
       "correct": 18,
       "runs": 18
     }

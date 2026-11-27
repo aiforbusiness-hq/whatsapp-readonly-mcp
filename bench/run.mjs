@@ -1,17 +1,21 @@
 // Benchmark: this plugin vs browser automation, on the same made-up WhatsApp Web page.
 //
-//   node bench/run.mjs [--runs 3] [--methods plugin,browser] [--model <id>]
+//   node bench/run.mjs [--runs 3] [--methods plugin,browser,chrome] [--model <id>] [--chrome-device <deviceId>]
 //
 // For each question in fixture.mjs and each method, runs `claude -p` and records wall time,
 // tokens and cost from Claude Code's JSON output. Raw results: bench/results/raw-<time>.jsonl
 //
 // - plugin:  Claude gets only this plugin's MCP tools (real extension + real MCP server).
 // - browser: Claude gets only a browser (Playwright MCP) opened on the same page, and reads it itself.
+// - chrome:  Claude uses Claude in Chrome (your real Chrome, its own tab group) on the same page, served at
+//            http://127.0.0.1:<port>/ because your Chrome's web.whatsapp.com is the real one. Every address
+//            it opens is logged per run, so you can check it never left the test page.
 // Both use a fake web.whatsapp.com served on this computer (test ports, made-up chats).
 // Never touches the real WhatsApp, ports 47821-47830 or ~/.whatsapp-readonly-mcp.
 // Needs: Chrome for Testing / Chromium (Playwright's), openssl, npx, and the `claude` CLI logged in.
 import { spawn, execFileSync } from "node:child_process";
 import { createServer } from "node:https";
+import { createServer as createHttpServer } from "node:http";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, readdirSync, existsSync, appendFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join, dirname } from "node:path";
@@ -24,6 +28,7 @@ const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ?
 const RUNS = Number(arg("runs", 3));
 const METHODS = arg("methods", "plugin,browser").split(",");
 const MODEL = arg("model", "");
+const CHROME_DEVICE = arg("chrome-device", "");
 const PW = "@playwright/mcp@0.0.86";
 const BASE = 32100; // test port band, away from the real 47821-47830 and from the test suites
 const ID = "hmajmekaiaiilhneebgbnchonfkblndb";
@@ -55,6 +60,9 @@ const srv = createServer({ key: readFileSync(join(dir, "k.pem")), cert: readFile
 });
 await new Promise((r) => srv.listen(0, "127.0.0.1", r));
 const PORT = srv.address().port;
+const plain = createHttpServer((req, res) => { res.setHeader("content-type", "text/html"); res.end(req.url.split("?")[0] === "/" ? PAGE : ""); });
+await new Promise((r) => plain.listen(0, "127.0.0.1", r));
+const PLAIN_URL = `http://127.0.0.1:${plain.address().port}/`;
 const CHROMIUM = findChromium();
 const chromeArgs = [`--host-resolver-rules=MAP web.whatsapp.com:443 127.0.0.1:${PORT}`, "--ignore-certificate-errors"];
 const work = join(dir, "work"); mkdirSync(work); // empty folder: no project instructions get loaded
@@ -114,9 +122,20 @@ async function setupBrowser() {
   return { cfg, allow: "mcp__browser", hint: " WhatsApp Web is open and logged in at https://web.whatsapp.com — use the browser to read it." };
 }
 
+// 4. Claude in Chrome: the built-in browser use of Claude Code, in your own Chrome
+async function setupChrome() {
+  const cfg = join(dir, "mcp-none.json");
+  writeFileSync(cfg, JSON.stringify({ mcpServers: {} }));
+  const pick = CHROME_DEVICE ? ` If you are asked to choose a browser, call select_browser with deviceId ${CHROME_DEVICE}.` : "";
+  log("chrome ready: Claude in Chrome on", PLAIN_URL);
+  return { cfg, allow: "mcp__claude-in-chrome", chrome: true,
+    hint: ` This WhatsApp Web page is at ${PLAIN_URL} — open it in a new tab of your own and read it with the browser tools. Use only that address: never open, read or switch to any other tab or website.${pick}` };
+}
+
 function runClaude(method, setup, task) {
   const prompt = task.prompt + setup.hint + " Only read; never send, type or click anything that sends.";
-  const args = ["-p", prompt, "--output-format", "json", "--mcp-config", setup.cfg, "--strict-mcp-config", "--tools", "", "--allowedTools", setup.allow, "--setting-sources", "", "--max-turns", "40"];
+  const args = ["-p", prompt, "--output-format", "stream-json", "--verbose", "--mcp-config", setup.cfg, "--strict-mcp-config", "--tools", "", "--allowedTools", setup.allow, "--setting-sources", "", "--max-turns", "40"];
+  if (setup.chrome) args.push("--chrome");
   if (MODEL) args.push("--model", MODEL);
   return new Promise((resolve) => {
     const t0 = Date.now();
@@ -127,7 +146,16 @@ function runClaude(method, setup, task) {
     p.on("close", () => {
       clearTimeout(kill);
       const wall = Date.now() - t0;
-      let j = null; try { j = JSON.parse(out); } catch (_) {}
+      let j = null; const urls = [], tools = [];
+      for (const line of out.split("\n")) {
+        let e; try { e = JSON.parse(line); } catch (_) { continue; }
+        if (e.type === "result") j = e;
+        for (const c of e.message?.content || []) if (c.type === "tool_use") {
+          // every address anywhere in the call, including batched steps
+          for (const u of JSON.stringify(c.input || {}).match(/https?:\/\/[^"\\\s]+/g) || []) urls.push(u);
+          tools.push(c.name.replace(/^mcp__[^_]+(?:-[^_]+)*__/, ""));
+        }
+      }
       const u = Object.values(j?.modelUsage || {}).reduce((a, m) => ({
         input: a.input + (m.inputTokens || 0), cache_write: a.cache_write + (m.cacheCreationInputTokens || 0),
         cache_read: a.cache_read + (m.cacheReadInputTokens || 0), output: a.output + (m.outputTokens || 0) }), { input: 0, cache_write: 0, cache_read: 0, output: 0 });
@@ -136,6 +164,8 @@ function runClaude(method, setup, task) {
         time: new Date().toISOString(), method, task: task.id, wall_ms: wall, api_ms: j?.duration_api_ms ?? null, turns: j?.num_turns ?? null,
         tokens: { ...u, total: u.input + u.cache_write + u.cache_read + u.output }, cost_usd: j?.total_cost_usd ?? null,
         model: Object.keys(j?.modelUsage || {}).join(","), correct: !!j && task.check(answer.toLowerCase()), error: j ? (j.is_error ? j.subtype : null) : "no JSON output",
+        // in your real Chrome, web.whatsapp.com is the REAL WhatsApp: there only the 127.0.0.1 test page is allowed
+        tools, urls, left_test_page: urls.some((u) => !(setup.chrome ? /^http:\/\/127\.0\.0\.1:/ : /^https?:\/\/(web\.whatsapp\.com|127\.0\.0\.1)[:/]/).test(u) && !/^(back|forward)$/.test(u)),
         answer: answer.slice(0, 600)
       });
     });
@@ -145,6 +175,7 @@ function runClaude(method, setup, task) {
 const setups = {};
 if (METHODS.includes("plugin")) setups.plugin = await setupPlugin();
 if (METHODS.includes("browser")) setups.browser = await setupBrowser();
+if (METHODS.includes("chrome")) setups.chrome = await setupChrome();
 mkdirSync(join(ROOT, "bench/results"), { recursive: true });
 const out = join(ROOT, "bench/results", `raw-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`);
 log("writing", out);

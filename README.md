@@ -8,12 +8,6 @@
 
 ![How it works: your AI app, the local plugin and the Chrome extension with WhatsApp Web, all on your computer, connected over 127.0.0.1. No relay or outside server.](docs/images/architecture.png)
 
-### Benchmark: 2.4× faster, 3.4× fewer tokens than browser automation
-
-Same three questions on the same made-up WhatsApp Web page, asked through Claude Code. Every one of the 36 runs answered correctly. [How it was measured](bench/README.md) · [raw results](bench/results/)
-
-![Benchmark: this plugin answers in 8–10 seconds with about 18k tokens; browser automation takes 20–24 seconds and 46k–77k tokens](docs/images/benchmark.svg)
-
 [![tests](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml)
 ![secure: no send tool](https://img.shields.io/badge/secure-no%20send%20tool-brightgreen)
 ![private: no relay](https://img.shields.io/badge/private-no%20relay%2C%20no%20server-brightgreen)
@@ -31,10 +25,17 @@ In the stores the product is called **AI for Business Chat Assistant**, by AI fo
 
 ---
 
+## Benchmark: 2.4–2.8× faster, 3.4–5.3× fewer tokens than browser automation
+
+Same three questions on the same made-up WhatsApp Web page, asked through Claude Code. We compared this plugin with two ways of letting AI read the page itself: [Playwright MCP](https://github.com/microsoft/playwright-mcp) and [Claude in Chrome](https://claude.com/chrome). Every one of the 54 runs answered correctly. [How it was measured](bench/README.md) · [raw results](bench/results/)
+
+![Benchmark: this plugin answers in 8–10 seconds with about 18k tokens; Playwright MCP takes 20–24 seconds and 46k–77k tokens; Claude in Chrome takes 22–28 seconds and 64k–117k tokens](docs/images/benchmark.svg)
+
 ## Why this exists
 
 For people who use AI every day and often need its help with WhatsApp: who is waiting for a reply, what a busy group said, a first draft of an answer. It is a convenience, not a way around WhatsApp.
 
+- **Fast and light on tokens.** It hands your AI just the chats and messages it asked for, instead of making it read the whole web page. In our [benchmark](#benchmark-2428-faster-3453-fewer-tokens-than-browser-automation) it answered 2.4–2.8× faster and used 3.4–5.3× fewer tokens than AI reading WhatsApp Web through a browser (Playwright MCP or Claude in Chrome).
 - **Never sends a message by itself.** It reads your chats and saves reply drafts; you read each draft and press send yourself.
 - **Not for spam or bulk messaging.** There is no send, broadcast, forward or auto-reply feature, and there never will be.
 - **Doesn't get around WhatsApp.** It reads the WhatsApp Web tab you already use, logged in as you. No new linked device, no unofficial account, no scraping of other people's chats.
