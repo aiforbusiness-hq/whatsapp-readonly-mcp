@@ -84,6 +84,18 @@ async function updateDraftNow(id, patch) {
   return d;
 }
 
+// 用户在插件里删掉一条草稿（弹窗 / 仪表板）：真的从清单拿掉，不是标「不用了」
+export function removeDraft(id) {
+  return serial(async () => {
+    const list = await loadAll();
+    const i = list.findIndex((x) => x.id === id);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    await saveAll(list);
+    return true;
+  });
+}
+
 export function clearDrafts() {
   return serial(() => chrome.storage.local.remove(KEY));
 }

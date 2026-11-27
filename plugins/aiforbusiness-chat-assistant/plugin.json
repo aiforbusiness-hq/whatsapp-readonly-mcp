@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "aiforbusiness-chat-assistant",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Reads your own WhatsApp Web open in Chrome: who is waiting for your reply, group summaries, and reply drafts (saved as drafts, never sent). Works with the AI for Business Chrome extension. Everything stays on your computer; no outside servers. Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.",
   "author": {
     "name": "AI for Business",

@@ -10,7 +10,7 @@
 import "./i18n.js"; // tr()：中文 / 英文
 import { runRead, openChat, findWhatsAppTab, focusOrOpenWhatsApp } from "./wa.js";
 import { downloadMedia, getMediaLog, clearMediaLog, showFile, vetMedia } from "./media.js";
-import { addDraft, listDrafts, updateDraft, clearDrafts, reconcile, purgeOld } from "./drafts.js";
+import { addDraft, listDrafts, updateDraft, removeDraft, clearDrafts, reconcile, purgeOld } from "./drafts.js";
 import { logRequest, mark, getActivity, clearActivity, summarizeParams, summarizeResult } from "./activity.js";
 import { b64, rand, normCode, isB64Of, sameB64, helloProof, extStart, extFinish, unwrapSecret, validSecret, CODE_DIGITS, PROTOCOL } from "./pairing.js";
 
@@ -629,6 +629,11 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   }
   if (msg?.type === "ui_drafts" && fromPopup(sender)) {
     listDrafts({ limit: 300 }).then((drafts) => reply({ ok: true, drafts }));
+    return true;
+  }
+  // 删一条草稿：只有插件自己的弹窗和仪表板可以（AI 没有这个工具）
+  if (msg?.type === "remove_draft" && (fromPopup(sender) || fromDash(sender) || fromWaPage(sender))) {
+    removeDraft(String(msg.id || "")).then((ok) => reply({ ok }), (e) => reply({ ok: false, reason: String(e?.message || e) }));
     return true;
   }
   if (msg?.type === "ui_clear_drafts" && fromPopup(sender)) {

@@ -5,7 +5,7 @@
 import { Bridge } from "./lib/bridge.js";
 import { TOOLS } from "./lib/tools.js";
 
-const SERVER_INFO = { name: "aiforbusiness-chat-assistant", version: "0.12.2" };
+const SERVER_INFO = { name: "aiforbusiness-chat-assistant", version: "0.12.3" };
 const SUPPORTED = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const INSTRUCTIONS =
   "Reads the user's own WhatsApp Web that is open in their Chrome. It is read-only: it cannot send, reply, forward, delete or mark as read, and there are no tools for that. " +

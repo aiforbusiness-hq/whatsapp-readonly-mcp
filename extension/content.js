@@ -158,11 +158,39 @@ svg { width:14px; height:14px; flex:none; }
     return Math.floor(s / 86400) + tr(" 天前", " days ago");
   }
 
+  // 卡片浮在输入框上方。为了不盖住最新的信息：在 WhatsApp 的信息卷动区底部留出跟卡片一样高的空位，
+  // 原本在最底下就跟着卷到底。卡片收起 / 换对话 / 插件重新载入时，把原本的 padding 还回去。只改样式，不动 WhatsApp 的内容。
+  let padEl = null, padOrig = "", padBase = 0, padNow = 0;
+  function messageScroller() {
+    if (padEl && padEl.isConnected) return padEl;
+    const h = document.querySelector("#main header"), f = footer();
+    if (!h || !f || typeof document.elementFromPoint !== "function" || typeof getComputedStyle !== "function") return null;
+    const hr = h.getBoundingClientRect(), fr = f.getBoundingClientRect();
+    const x = (fr.left + fr.right) / 2, y = Math.min(hr.bottom + 40, (hr.bottom + fr.top) / 2);
+    for (let n = document.elementFromPoint(x, y); n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+      if (n === host) return null;
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight) return n;
+    }
+    return null;
+  }
+  function reserve(px) {
+    px = Math.max(0, Math.round(px));
+    const sc = px ? messageScroller() : null;
+    if (padEl && (padEl !== sc || !px)) { padEl.style.paddingBottom = padOrig; padEl = null; padNow = 0; }
+    if (!sc || px === padNow) return;
+    if (!padEl) { padEl = sc; padOrig = sc.style.paddingBottom; padBase = parseFloat(getComputedStyle(sc).paddingBottom) || 0; }
+    const atBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
+    sc.style.paddingBottom = padBase + px + "px";
+    padNow = px;
+    if (atBottom) sc.scrollTop = sc.scrollHeight;
+  }
+
   function place() {
     const f = footer();
-    if (!current || !f) { wrap.hidden = true; return; }
+    if (!current || !f) { wrap.hidden = true; reserve(0); return; }
     const r = f.getBoundingClientRect();
-    if (!r.width) { wrap.hidden = true; return; }
+    if (!r.width) { wrap.hidden = true; reserve(0); return; }
     wrap.hidden = false;
     wrap.classList.toggle("dark", document.body.classList.contains("dark") || document.documentElement.classList.contains("dark") ||
       (!document.body.classList.length && matchMedia("(prefers-color-scheme: dark)").matches));
@@ -171,6 +199,9 @@ svg { width:14px; height:14px; flex:none; }
     wrap.style.bottom = window.innerHeight - r.top + 8 + "px";
     card.hidden = collapsed;
     $("expand").hidden = !collapsed;
+    // 卡片底边离输入框 8px；再多留 8px 空隙
+    const wr = wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : null;
+    reserve(wr && wr.height ? wr.height + 16 : 0);
   }
 
   function show(d) {
@@ -315,7 +346,7 @@ svg { width:14px; height:14px; flex:none; }
   let lastAsk = 0;
   const tick = setInterval(() => {
     // 插件被重新载入了：这一份收起来，新的那份会接手
-    if (!chrome.runtime?.id) { clearInterval(tick); host.remove(); return; }
+    if (!chrome.runtime?.id) { clearInterval(tick); reserve(0); host.remove(); return; }
     if (document.hidden) return;
     const h = headerText();
     const changed = h !== lastHeader;

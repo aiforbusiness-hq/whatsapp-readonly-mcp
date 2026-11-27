@@ -264,13 +264,31 @@ test("download_media end to end", { skip: !CHROMIUM && "no Chromium for testing"
     assert.equal(ov.items, 1); assert.equal(ov.tag, "New"); assert.ok(ov.open);
     assert.match(ov.text, /reply by tonight/);
     assert.equal(ov.bg, "rgb(255, 243, 196)", "new draft has the highlight background");
-    if (process.env.E2E_SHOT_OVERVIEW) {
+    {
+      // Remove needs two real clicks; then the Overview card goes away and the draft is gone
       const t = (await (await fetch(http + "/json")).json()).find((x) => x.url.startsWith(`chrome-extension://${ID}/dashboard.html`));
       const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => (ws.onopen = r));
-      const send = (id, method, params) => new Promise((r) => { ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id === id) r(m.result); }); ws.send(JSON.stringify({ id, method, params })); });
-      await send(1, "Emulation.setDeviceMetricsOverride", { width: 1100, height: 900, deviceScaleFactor: 1, mobile: false });
-      await sleep(400);
-      writeFileSync(process.env.E2E_SHOT_OVERVIEW, Buffer.from((await send(2, "Page.captureScreenshot", { format: "png" })).data, "base64")); ws.close();
+      let nid = 1; const pend = new Map();
+      ws.onmessage = (e) => { const m = JSON.parse(e.data); if (pend.has(m.id)) { pend.get(m.id)(m.result); pend.delete(m.id); } };
+      const send = (method, params) => new Promise((r) => { const id = nid++; pend.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
+      const ev = async (expression) => (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result.value;
+      const clickRemove = async () => {
+        const r = await ev(`(() => { const b = document.querySelector("#newDraftList .remove-btn"); b.scrollIntoView({ block: "center" }); const x = b.getBoundingClientRect(); return { x: x.x + x.width / 2, y: x.y + x.height / 2 }; })()`);
+        for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: r.x, y: r.y, button: "left", clickCount: 1 });
+        await sleep(600);
+      };
+      if (process.env.E2E_SHOT_OVERVIEW) {
+        await send("Emulation.setDeviceMetricsOverride", { width: 1100, height: 900, deviceScaleFactor: 1, mobile: false }); await sleep(300);
+        writeFileSync(process.env.E2E_SHOT_OVERVIEW, Buffer.from((await send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+      }
+      await clickRemove();
+      assert.equal(await ev(`document.querySelector("#newDraftList .remove-btn")?.textContent`), "Remove? Click again", "first click only asks");
+      assert.equal(await ev(`document.getElementById("newDraftsCard").hidden`), false);
+      await clickRemove();
+      await sleep(1500);
+      assert.equal(await ev(`document.getElementById("newDraftsCard").hidden`), true, "draft removed, card gone");
+      assert.equal((await a.call("list_drafts", { include_actual: false })).drafts.length, 0);
+      ws.close();
     }
     // "My data": every clear asks first (real mouse clicks; a script click is not accepted), Cancel keeps everything
     {

@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "aiforbusiness-chat-assistant",
   "display_name": "AI for Business Chat Assistant",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Reads your WhatsApp Web open in Chrome and helps you draft replies, saved as drafts. It never sends messages, never marks as read, and never connects to outside servers. Needs the AI for Business Chat Assistant Chrome extension. Unofficial: not affiliated with, endorsed or sponsored by WhatsApp or Meta.",
   "long_description": "Ask Claude things like \"who messaged me recently\", \"who haven't I replied to\" or \"what did this group talk about\".\n\n- Never sends: there is no send, reply, forward, delete or mark-as-read feature\n- AI drafts: Claude writes a reply and saves it as a draft; a preview appears above the WhatsApp message box and you press send yourself\n- Local only: talks to the Chrome extension over 127.0.0.1 with a pairing code; no outside servers, no analytics\n- Unofficial: not affiliated with WhatsApp or Meta; reads WhatsApp Web internals, which may break when WhatsApp updates; try with a work number first",
   "author": {

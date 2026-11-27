@@ -22,7 +22,8 @@ const state = { tab: "waiting", waiting: [], drafts: [], chats: [], loaded: fals
 
 const ICON = {
   open: '<path d="M14 3h7v7"/><path d="M10 14L21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
-  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/>'
 };
 function svg(name) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -179,6 +180,18 @@ function renderDrafts(kw) {
       button(tr("复制", "Copy"), "copy", "", async () => {
         try { await navigator.clipboard.writeText(d.text); fb.textContent = tr("已复制", "Copied"); send({ type: "card_mark", id: d.id, status: "copied" }); }
         catch (_) { fb.textContent = tr("复制失败", "Copy failed"); }
+      }),
+      // 删除：按两次才删（第一次变成「确定删除？」，4 秒内再按一次）
+      button(tr("删除", "Remove"), "trash", "remove", async (e, b) => {
+        if (!b.dataset.armed) {
+          b.dataset.armed = "1"; b.lastChild.textContent = tr("确定删除？", "Remove? Click again");
+          setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.lastChild.textContent = tr("删除", "Remove"); } }, 4000);
+          return;
+        }
+        const r = await send({ type: "remove_draft", id: d.id });
+        if (!r?.ok) { fb.textContent = r?.reason || tr("删不掉", "Couldn't remove"); return; }
+        state.drafts = state.drafts.filter((x) => x.id !== d.id);
+        render();
       }),
       fb
     );

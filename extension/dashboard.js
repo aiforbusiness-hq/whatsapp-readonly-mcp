@@ -524,6 +524,23 @@ function avatar(name) {
   const ch = Array.from(String(name || "?").trim())[0] || "?";
   return el("span", { class: "avatar", "aria-hidden": "true", style: null, text: ch.toUpperCase() });
 }
+// 删一条草稿：按两次才删（第一次变「确定删除？」，4 秒内再按）；删了就重新载入
+function removeBtn(id) {
+  const label = tr("删除", "Remove");
+  const b = el("button", { class: "remove-btn", title: tr("从草稿清单删掉这一条（不会动 WhatsApp）", "Delete this draft from the list (WhatsApp is not touched)") }, label);
+  b.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (!e.isTrusted) return;
+    if (!b.dataset.armed) {
+      b.dataset.armed = "1"; b.textContent = tr("确定删除？", "Remove? Click again");
+      setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = label; } }, 4000);
+      return;
+    }
+    const r = await ask({ type: "remove_draft", id }).catch((err) => { showBanner(failText(err)); return null; });
+    if (r?.ok) load(); else if (r) showBanner(r.reason || tr("删不掉这条草稿", "Couldn't remove this draft"));
+  });
+  return b;
+}
 function openBtn(chatId) {
   return el("button", {
     class: "open-btn", title: tr("打开对话（会标已读，对方会看到蓝勾）", "Open chat (marks it as read; they will see blue ticks)"),
@@ -573,7 +590,7 @@ function renderNewDrafts() {
         el("span", { class: "tag new", text: tr("新", "New") }),
         el("time", { text: ago(d.created_at) }),
         el("span", { class: "by", text: tr("由 ", "by ") + clientName(d.source) + tr(" 写", "") }),
-        openBtn(d.chat_id))));
+        el("span", { class: "btns" }, removeBtn(d.id), openBtn(d.chat_id)))));
   }));
   $("seeDrafts").textContent = fresh.length > 5 ? tr(`看全部（还有 ${fresh.length - 5} 条）`, `See all (${fresh.length - 5} more)`) : tr("看全部草稿", "See all drafts");
 }
@@ -946,7 +963,7 @@ function renderDrafts() {
         : el("div", { class: "note", text: o.hint }));
     const foot = el("div", { class: "chat-foot" },
       el("span", { text: a.sim != null ? tr(`相似度 ${pct(a.sim)} · 草稿后 ${dur(a.minutes)} 发出第一条`, `Similarity ${pct(a.sim)} · first message ${dur(a.minutes)} after the draft`) : tr("还没有可比对的信息", "Nothing to compare yet") }),
-      openBtn(d.chat_id));
+      el("span", { class: "btns" }, removeBtn(d.id), openBtn(d.chat_id)));
     list.append(el("li", { class: isNewDraft({ d, a }) ? "is-new" : null }, el("details", {}, summary, chat, foot)));
   }
   const more = $("moreDrafts");

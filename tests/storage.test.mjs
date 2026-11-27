@@ -36,6 +36,16 @@ test("two AI apps saving at once: both drafts are kept", async () => {
   assert.deepEqual(store.drafts.map((d) => d.text).sort(), ["draft for B", "draft for C"]);
 });
 
+test("removing one draft keeps the others, even with a save in flight", async () => {
+  await drafts.clearDrafts();
+  const a = await drafts.addDraft({ chat: { id: "4@c.us", name: "d" }, text: "draft for D" });
+  const [, removed] = await Promise.all([drafts.addDraft({ chat: { id: "5@c.us", name: "e" }, text: "draft for E" }), drafts.removeDraft(a.draft.id)]);
+  assert.equal(removed, true);
+  assert.deepEqual(store.drafts.map((d) => d.text), ["draft for E"]);
+  assert.equal(await drafts.removeDraft("no-such-id"), false);
+  assert.deepEqual(store.drafts.map((d) => d.text), ["draft for E"]);
+});
+
 test("clearing the activity log is not undone by a write in flight", async () => {
   await activity.logRequest({ time: new Date().toISOString(), op: "status", ok: true });
   await Promise.all([activity.logRequest({ time: new Date().toISOString(), op: "list_chats", ok: true }), activity.clearActivity()]);

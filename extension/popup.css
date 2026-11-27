@@ -182,3 +182,5 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .ignored-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
 .link-btn { border: 0; background: none; color: var(--fg); font-weight: 600; font-size: 12px; padding: 4px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .status.err .open-wa { display: flex; margin-top: 10px; }
+.btn.remove { color: var(--bad); }
+.btn.remove[data-armed] { background: var(--bad-soft); }
