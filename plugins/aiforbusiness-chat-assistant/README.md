@@ -34,7 +34,7 @@ The first time, ask Claude "What's my WhatsApp status?". Claude shows a 6-digit 
 
 ## Works on its own
 
-You do not have to say "WhatsApp". Ask "who is waiting for my reply?", "did Aisha reply?" or "reply to Jason, say tomorrow is fine", and Claude reads the chats and saves reply drafts by itself. Drafts are never sent. The plugin's `read-and-draft-replies` skill and the server instructions tell Claude when to use the tools. New drafts show first on the extension's Overview page, highlighted in yellow.
+You do not have to say "WhatsApp". Ask "who is waiting for my reply?", "did Aisha reply?" or "reply to Jason, say tomorrow is fine", and Claude reads the chats and saves reply drafts by itself. Drafts are never sent. The plugin's `whatsapp-read-and-draft` skill and the server instructions tell Claude when to use the tools. New drafts show first on the extension's Overview page, highlighted in yellow.
 
 ## What it runs, sends and fetches
 
