@@ -1,6 +1,10 @@
 # WhatsApp Readonly MCP
 
-**Let Claude, ChatGPT or Codex read your WhatsApp Web chats, find who is waiting for your reply, summarise groups and save reply drafts, without ever sending a message.**
+**Your AI talks straight to your own WhatsApp Web. No relay, no servers in between, never sends.**
+
+Claude, ChatGPT or Codex reads the WhatsApp Web tab you already have open, finds who is waiting for your reply, summarises groups and saves reply drafts. Everything runs on your computer: the plugin talks to the Chrome extension over `127.0.0.1` only, after a 6-digit pairing. There is no relay and no server of ours in between, and no new linked device on your WhatsApp account.
+
+![How it works: your AI app, the local plugin and the Chrome extension with WhatsApp Web, all on your computer, connected over 127.0.0.1. No relay or outside server.](docs/images/architecture.png)
 
 [![tests](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/aiforbusiness-hq/whatsapp-readonly-mcp/actions/workflows/test.yml)
 ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
